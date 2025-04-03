@@ -1,5 +1,17 @@
-export function formatDate(dateString: string): string {
+export function formatDate(dateString: string, includeYear = false): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+
+  if (includeYear) {
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  })
 }
 

@@ -15,13 +15,13 @@ export default function WalkingRunningPanel({ activities }: WalkingRunningPanelP
   const walkRunActivities = filterActivitiesByType(activities, ["walking", "running"])
 
   return (
-    <Card className="h-full overflow-hidden">
-      <CardHeader className="pb-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <CardTitle>Walking & Running</CardTitle>
       </CardHeader>
-      <CardContent className="p-4">
+      <CardContent className="p-4 overflow-auto flex-grow">
         <Tabs defaultValue="7days" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-4">
+          <TabsList className="grid grid-cols-3 mb-4 sticky top-0 bg-card z-10">
             <TabsTrigger value="7days">7 Days</TabsTrigger>
             <TabsTrigger value="4weeks">4 Weeks</TabsTrigger>
             <TabsTrigger value="all">All Time</TabsTrigger>

@@ -1,10 +1,15 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -15,11 +20,21 @@ import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface DataEntryPanelProps {
-  onAddActivity: (activity: ActivityData) => void
+interface EditActivityDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  activity: ActivityData | null
+  onSave: (updatedActivity: ActivityData) => void
+  onDelete: (id: string) => void
 }
 
-export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
+export default function EditActivityDialog({
+  open,
+  onOpenChange,
+  activity,
+  onSave,
+  onDelete,
+}: EditActivityDialogProps) {
   const [date, setDate] = useState<Date>(new Date())
   const [type, setType] = useState<ActivityType>("walking")
   const [distance, setDistance] = useState("")
@@ -27,13 +42,23 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
   const [maintenanceCost, setMaintenanceCost] = useState("")
   const [notes, setNotes] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  // Update form when activity changes
+  useEffect(() => {
+    if (activity) {
+      setDate(new Date(activity.date))
+      setType(activity.type)
+      setDistance(activity.distance.toString())
+      setDuration(activity.duration.toString())
+      setMaintenanceCost(activity.maintenanceCost?.toString() || "")
+      setNotes(activity.notes || "")
+    }
+  }, [activity])
 
-    if (!distance || !duration) return
+  const handleSave = () => {
+    if (!activity || !distance || !duration) return
 
-    const newActivity: ActivityData = {
-      id: Date.now().toString(),
+    const updatedActivity: ActivityData = {
+      ...activity,
       date: date.toISOString(),
       type,
       distance: Number.parseFloat(distance),
@@ -42,27 +67,33 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
       notes,
     }
 
-    onAddActivity(newActivity)
-
-    // Reset form
-    setDistance("")
-    setDuration("")
-    setMaintenanceCost("")
-    setNotes("")
+    onSave(updatedActivity)
+    onOpenChange(false)
   }
 
+  const handleDelete = () => {
+    if (!activity) return
+    onDelete(activity.id)
+    onOpenChange(false)
+  }
+
+  if (!activity) return null
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-2 flex-shrink-0">
-        <CardTitle>Add Activity</CardTitle>
-      </CardHeader>
-      <CardContent className="p-4 overflow-auto flex-grow">
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Edit Activity</DialogTitle>
+          <DialogDescription>Make changes to your activity record.</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="edit-date">Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
+                  id="edit-date"
                   variant="outline"
                   className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
                 >
@@ -77,9 +108,9 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Activity Type</Label>
+            <Label htmlFor="edit-type">Activity Type</Label>
             <Select value={type} onValueChange={(value) => setType(value as ActivityType)}>
-              <SelectTrigger>
+              <SelectTrigger id="edit-type">
                 <SelectValue placeholder="Select activity type" />
               </SelectTrigger>
               <SelectContent>
@@ -92,9 +123,9 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="distance">Distance ({type === "driving" ? "miles" : "km"})</Label>
+            <Label htmlFor="edit-distance">Distance ({type === "driving" ? "miles" : "km"})</Label>
             <Input
-              id="distance"
+              id="edit-distance"
               type="number"
               step="0.01"
               min="0"
@@ -105,9 +136,9 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="duration">Duration (minutes)</Label>
+            <Label htmlFor="edit-duration">Duration (minutes)</Label>
             <Input
-              id="duration"
+              id="edit-duration"
               type="number"
               step="1"
               min="0"
@@ -118,9 +149,9 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="maintenanceCost">Monthly Maintenance Cost ($)</Label>
+            <Label htmlFor="edit-maintenance">Monthly Maintenance Cost ($)</Label>
             <Input
-              id="maintenanceCost"
+              id="edit-maintenance"
               type="number"
               step="0.01"
               min="0"
@@ -131,16 +162,24 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label htmlFor="edit-notes">Notes (optional)</Label>
+            <Input id="edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
+        </div>
 
-          <Button type="submit" className="w-full">
-            Add Activity
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <Button variant="destructive" onClick={handleDelete}>
+            Delete
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save changes</Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

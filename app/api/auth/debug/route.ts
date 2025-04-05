@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { executeSQL } from "@/lib/db/neon"
+import { sql } from "@/lib/db/neon"
 
 export async function GET() {
   try {
@@ -12,40 +12,42 @@ export async function GET() {
     }
 
     // Check database connection
-    const connectionTest = await executeSQL("SELECT NOW() as time")
-
-    if (!connectionTest.success) {
+    let connectionTest
+    try {
+      connectionTest = await sql`SELECT NOW() as time`
+    } catch (error: any) {
       return NextResponse.json(
         {
           success: false,
           error: "Database connection failed",
-          details: connectionTest.error,
+          details: error.message,
         },
         { status: 500 },
       )
     }
 
     // Check if users table exists
-    const tableCheck = await executeSQL(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'users'
-      ) as table_exists
-    `)
-
-    if (!tableCheck.success) {
+    let tableCheck
+    try {
+      tableCheck = await sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          AND table_name = 'users'
+        ) as table_exists
+      `
+    } catch (error: any) {
       return NextResponse.json(
         {
           success: false,
           error: "Failed to check if users table exists",
-          details: tableCheck.error,
+          details: error.message,
         },
         { status: 500 },
       )
     }
 
-    const usersTableExists = tableCheck.data[0].table_exists
+    const usersTableExists = tableCheck[0].table_exists
 
     if (!usersTableExists) {
       return NextResponse.json(
@@ -59,34 +61,36 @@ export async function GET() {
     }
 
     // Check table structure
-    const tableStructure = await executeSQL(`
-      SELECT column_name, data_type, is_nullable
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-      AND table_name = 'users'
-      ORDER BY ordinal_position
-    `)
-
-    if (!tableStructure.success) {
+    let tableStructure
+    try {
+      tableStructure = await sql`
+        SELECT column_name, data_type, is_nullable
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = 'users'
+        ORDER BY ordinal_position
+      `
+    } catch (error: any) {
       return NextResponse.json(
         {
           success: false,
           error: "Failed to get users table structure",
-          details: tableStructure.error,
+          details: error.message,
         },
         { status: 500 },
       )
     }
 
     // Count users
-    const userCount = await executeSQL("SELECT COUNT(*) as count FROM users")
-
-    if (!userCount.success) {
+    let userCount
+    try {
+      userCount = await sql`SELECT COUNT(*) as count FROM users`
+    } catch (error: any) {
       return NextResponse.json(
         {
           success: false,
           error: "Failed to count users",
-          details: userCount.error,
+          details: error.message,
         },
         { status: 500 },
       )
@@ -99,10 +103,10 @@ export async function GET() {
       success: true,
       database: {
         connected: true,
-        serverTime: connectionTest.data[0].time,
+        serverTime: connectionTest[0].time,
         usersTableExists,
-        tableStructure: tableStructure.data,
-        userCount: userCount.data[0].count,
+        tableStructure,
+        userCount: userCount[0].count,
       },
       environment: {
         nodeEnv: process.env.NODE_ENV,

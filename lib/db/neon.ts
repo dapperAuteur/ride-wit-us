@@ -11,7 +11,7 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not set")
 }
 
-// Create a SQL query executor with error handling
+// Create a SQL query executor
 export const sql = neon(connectionString)
 
 // Create a connection pool for more complex operations
@@ -25,13 +25,24 @@ export function getPool() {
 }
 
 // Helper function to execute SQL with detailed error reporting
+// Updated to use tagged template literals
 export async function executeSQL(
   query: string,
   params: any[] = [],
 ): Promise<{ success: boolean; data?: any; error?: string; details?: any }> {
   try {
-    const result = await sql(query, params)
-    return { success: true, data: result }
+    // Convert to tagged template literal format
+    let result
+
+    if (params.length === 0) {
+      // If no parameters, use simple query
+      result = await sql.query(query)
+    } else {
+      // If parameters exist, use parameterized query
+      result = await sql.query(query, params)
+    }
+
+    return { success: true, data: result.rows || result }
   } catch (error: any) {
     console.error("Database error:", error)
 

@@ -1,7 +1,7 @@
 import { hash, compare } from "bcryptjs"
 import { sign, verify } from "jsonwebtoken"
 import { v4 as uuidv4 } from "uuid"
-import { executeSQL } from "@/lib/db/neon"
+import { sql } from "@/lib/db/neon"
 
 // Types for authentication
 export interface User {
@@ -111,20 +111,10 @@ export async function registerUser(email: string, password: string, name: string
       }
     }
 
-    // Check if user already exists
-    const checkUser = await executeSQL("SELECT email FROM users WHERE email = $1", [email])
+    // Check if user already exists - using tagged template literal
+    const checkUserResult = await sql`SELECT email FROM users WHERE email = ${email}`
 
-    if (!checkUser.success) {
-      console.error("Database error during user check:", checkUser.error)
-      return {
-        success: false,
-        error: "Database error during user check",
-        errorCode: "DB_ERROR",
-        details: checkUser.error,
-      }
-    }
-
-    if (checkUser.data && checkUser.data.length > 0) {
+    if (checkUserResult.length > 0) {
       return {
         success: false,
         error: "User with this email already exists",
@@ -138,25 +128,22 @@ export async function registerUser(email: string, password: string, name: string
     // Generate user ID
     const userId = uuidv4()
 
-    // Insert user into database
-    const insertUser = await executeSQL(
-      `INSERT INTO users (id, email, name, password, role, subscription_status) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
-       RETURNING id, email, name, role, subscription_status, created_at, updated_at`,
-      [userId, email, name, hashedPassword, "USER", "FREE"],
-    )
+    // Insert user into database - using tagged template literal
+    const insertUserResult = await sql`
+      INSERT INTO users (id, email, name, password, role, subscription_status) 
+      VALUES (${userId}, ${email}, ${name}, ${hashedPassword}, 'USER', 'FREE') 
+      RETURNING id, email, name, role, subscription_status, created_at, updated_at
+    `
 
-    if (!insertUser.success) {
-      console.error("Database error during user creation:", insertUser.error)
+    if (!insertUserResult || insertUserResult.length === 0) {
       return {
         success: false,
         error: "Failed to create user account",
         errorCode: "DB_ERROR",
-        details: insertUser.error,
       }
     }
 
-    const user = insertUser.data[0]
+    const user = insertUserResult[0]
 
     // Generate token
     const token = generateToken(user)
@@ -189,23 +176,14 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
       }
     }
 
-    // Get user from database
-    const getUser = await executeSQL(
-      "SELECT id, email, name, password, role, subscription_status, subscription_expiry, stripe_customer_id, created_at, updated_at FROM users WHERE email = $1",
-      [email],
-    )
+    // Get user from database - using tagged template literal
+    const getUserResult = await sql`
+      SELECT id, email, name, password, role, subscription_status, subscription_expiry, stripe_customer_id, created_at, updated_at 
+      FROM users 
+      WHERE email = ${email}
+    `
 
-    if (!getUser.success) {
-      console.error("Database error during login:", getUser.error)
-      return {
-        success: false,
-        error: "Database error during login",
-        errorCode: "DB_ERROR",
-        details: getUser.error,
-      }
-    }
-
-    if (!getUser.data || getUser.data.length === 0) {
+    if (!getUserResult || getUserResult.length === 0) {
       return {
         success: false,
         error: "Invalid email or password",
@@ -213,7 +191,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
       }
     }
 
-    const user = getUser.data[0]
+    const user = getUserResult[0]
 
     // Compare passwords
     const passwordMatch = await comparePasswords(password, user.password)
@@ -251,22 +229,14 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 // Get user by ID with detailed error handling
 export async function getUserById(userId: string): Promise<AuthResult> {
   try {
-    const getUser = await executeSQL(
-      "SELECT id, email, name, role, subscription_status, subscription_expiry, stripe_customer_id, created_at, updated_at FROM users WHERE id = $1",
-      [userId],
-    )
+    // Using tagged template literal
+    const getUserResult = await sql`
+      SELECT id, email, name, role, subscription_status, subscription_expiry, stripe_customer_id, created_at, updated_at 
+      FROM users 
+      WHERE id = ${userId}
+    `
 
-    if (!getUser.success) {
-      console.error("Database error while getting user:", getUser.error)
-      return {
-        success: false,
-        error: "Database error while getting user",
-        errorCode: "DB_ERROR",
-        details: getUser.error,
-      }
-    }
-
-    if (!getUser.data || getUser.data.length === 0) {
+    if (!getUserResult || getUserResult.length === 0) {
       return {
         success: false,
         error: "User not found",
@@ -276,7 +246,7 @@ export async function getUserById(userId: string): Promise<AuthResult> {
 
     return {
       success: true,
-      user: getUser.data[0],
+      user: getUserResult[0],
     }
   } catch (error: any) {
     console.error("Get user error:", error)

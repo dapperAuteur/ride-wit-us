@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/db/mongodb"
-import { UserModel } from "@/lib/db/models/user"
-import jwt from "jsonwebtoken"
+import { prisma } from "@/lib/db/prisma"
+import { verify } from "jsonwebtoken"
 import { cookies } from "next/headers"
-import { updatePricing } from "@/lib/pricing"
+
+// GET pricing tiers
+export async function GET() {
+  try {
+    const pricingTiers = await prisma.pricingTier.findMany({
+      orderBy: { price: "asc" },
+    })
+
+    return NextResponse.json({ pricingTiers })
+  } catch (error) {
+    console.error("Get pricing tiers error:", error)
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+  }
+}
 
 // PUT update pricing (admin only)
 export async function PUT(request: Request) {
@@ -15,26 +27,37 @@ export async function PUT(request: Request) {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
-
-    await connectToDatabase()
+    const decoded = verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
 
     // Find user by ID
-    const user = await UserModel.findById(decoded.id)
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    })
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
     // Check if user is admin
-    if (user.role !== "admin") {
+    if (user.role !== "ADMIN") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 403 })
     }
 
     const { pricing } = await request.json()
 
-    // Update pricing
-    updatePricing(pricing)
+    // Update pricing tiers
+    for (const tier of pricing) {
+      await prisma.pricingTier.update({
+        where: { id: tier.id },
+        data: {
+          name: tier.name,
+          price: tier.price,
+          interval: tier.interval as any,
+          stripePriceId: tier.stripePriceId,
+          features: tier.features,
+        },
+      })
+    }
 
     return NextResponse.json({ message: "Pricing updated successfully" })
   } catch (error) {

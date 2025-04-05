@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/db/mongodb"
-import { ActivityModel } from "@/lib/db/models/activity"
-import { UserModel } from "@/lib/db/models/user"
-import jwt from "jsonwebtoken"
+import { prisma } from "@/lib/db/prisma"
+import { verify } from "jsonwebtoken"
 import { cookies } from "next/headers"
-import mongoose from "mongoose"
 
 export async function POST(request: Request) {
   try {
@@ -15,35 +12,43 @@ export async function POST(request: Request) {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
-
-    await connectToDatabase()
+    const decoded = verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
 
     // Find user by ID
-    const user = await UserModel.findById(decoded.id)
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    })
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
     // Check if user has premium subscription
-    if (user.subscriptionStatus !== "monthly" && user.subscriptionStatus !== "annual") {
+    if (user.subscriptionStatus !== "MONTHLY" && user.subscriptionStatus !== "ANNUAL") {
       return NextResponse.json({ message: "Premium subscription required" }, { status: 403 })
     }
 
     const { activities } = await request.json()
 
     // Delete existing activities for this user
-    await ActivityModel.deleteMany({ userId: user._id })
+    await prisma.activity.deleteMany({
+      where: { userId: user.id },
+    })
 
     // Insert new activities
     const activitiesToInsert = activities.map((activity: any) => ({
-      ...activity,
-      userId: new mongoose.Types.ObjectId(user._id),
       date: new Date(activity.date),
+      type: activity.type,
+      distance: activity.distance,
+      duration: activity.duration,
+      maintenanceCost: activity.maintenanceCost,
+      notes: activity.notes,
+      userId: user.id,
     }))
 
-    await ActivityModel.insertMany(activitiesToInsert)
+    await prisma.activity.createMany({
+      data: activitiesToInsert,
+    })
 
     return NextResponse.json({ message: "Activities uploaded successfully" })
   } catch (error) {

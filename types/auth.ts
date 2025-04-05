@@ -1,11 +1,11 @@
-export type UserRole = "user" | "manager" | "admin"
+export type UserRole = "USER" | "MANAGER" | "ADMIN"
 
 export interface User {
   id: string
   email: string
   name: string
   role: UserRole
-  subscriptionStatus: "free" | "monthly" | "annual" | "none"
+  subscriptionStatus: "FREE" | "MONTHLY" | "ANNUAL" | "NONE"
   subscriptionExpiry?: string
   createdAt: string
   updatedAt: string

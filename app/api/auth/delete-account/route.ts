@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/db/mongodb"
-import { UserModel } from "@/lib/db/models/user"
-import { ActivityModel } from "@/lib/db/models/activity"
-import jwt from "jsonwebtoken"
+import { prisma } from "@/lib/db/prisma"
+import { verify } from "jsonwebtoken"
 import { cookies } from "next/headers"
 import stripe from "@/lib/stripe"
 
@@ -15,12 +13,12 @@ export async function DELETE() {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
-
-    await connectToDatabase()
+    const decoded = verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
 
     // Find user by ID
-    const user = await UserModel.findById(decoded.id)
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    })
 
     if (!user) {
       cookies().delete("auth_token")
@@ -42,11 +40,10 @@ export async function DELETE() {
       }
     }
 
-    // Delete user's activities
-    await ActivityModel.deleteMany({ userId: user._id })
-
-    // Delete user
-    await UserModel.findByIdAndDelete(user._id)
+    // Delete user (activities will be cascade deleted)
+    await prisma.user.delete({
+      where: { id: user.id },
+    })
 
     // Clear auth cookie
     cookies().delete("auth_token")

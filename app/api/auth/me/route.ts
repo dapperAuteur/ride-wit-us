@@ -1,47 +1,70 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/db/mongodb"
-import { UserModel } from "@/lib/db/models/user"
-import jwt from "jsonwebtoken"
 import { cookies } from "next/headers"
+import { verifyToken, getUserById } from "@/lib/auth/auth-utils"
 
 export async function GET() {
   try {
-    const token = cookies().get("auth_token")?.value
+    // Get the token from cookies
+    const cookieStore = cookies()
+    const token = cookieStore.get("auth_token")?.value
 
     if (!token) {
-      return NextResponse.json({ message: "Not authenticated" }, { status: 401 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Not authenticated",
+          errorCode: "NOT_AUTHENTICATED",
+        },
+        { status: 401 },
+      )
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
+    try {
+      // Verify the token
+      const decoded = verifyToken(token)
 
-    await connectToDatabase()
+      // Get the user from the database
+      const result = await getUserById(decoded.id)
 
-    // Find user by ID
-    const user = await UserModel.findById(decoded.id)
+      if (!result.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: result.error,
+            errorCode: result.errorCode,
+            details: process.env.NODE_ENV === "development" ? result.details : undefined,
+          },
+          { status: 404 },
+        )
+      }
 
-    if (!user) {
-      cookies().delete("auth_token")
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
+      return NextResponse.json({
+        success: true,
+        user: result.user,
+      })
+    } catch (error: any) {
+      // If token verification fails
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid token",
+          errorCode: "INVALID_TOKEN",
+        },
+        { status: 401 },
+      )
     }
+  } catch (error: any) {
+    console.error("Auth me route error:", error)
 
-    // Return user data (without password)
-    return NextResponse.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        subscriptionStatus: user.subscriptionStatus,
-        subscriptionExpiry: user.subscriptionExpiry,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Authentication check failed",
+        message: error.message,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       },
-    })
-  } catch (error) {
-    console.error("Get current user error:", error)
-    cookies().delete("auth_token")
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+      { status: 500 },
+    )
   }
 }
 

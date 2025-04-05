@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/db/mongodb"
-import { ActivityModel } from "@/lib/db/models/activity"
-import { UserModel } from "@/lib/db/models/user"
-import jwt from "jsonwebtoken"
+import { prisma } from "@/lib/db/prisma"
+import { verify } from "jsonwebtoken"
 import { cookies } from "next/headers"
 
 export async function GET() {
@@ -14,28 +12,31 @@ export async function GET() {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
-
-    await connectToDatabase()
+    const decoded = verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
 
     // Find user by ID
-    const user = await UserModel.findById(decoded.id)
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    })
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
     // Check if user has premium subscription
-    if (user.subscriptionStatus !== "monthly" && user.subscriptionStatus !== "annual") {
+    if (user.subscriptionStatus !== "MONTHLY" && user.subscriptionStatus !== "ANNUAL") {
       return NextResponse.json({ message: "Premium subscription required" }, { status: 403 })
     }
 
     // Get activities for this user
-    const activities = await ActivityModel.find({ userId: user._id }).sort({ date: -1 }).lean()
+    const activities = await prisma.activity.findMany({
+      where: { userId: user.id },
+      orderBy: { date: "desc" },
+    })
 
-    // Transform MongoDB documents to plain objects
+    // Transform Prisma objects to plain objects
     const transformedActivities = activities.map((activity) => ({
-      id: activity._id.toString(),
+      id: activity.id,
       date: activity.date.toISOString(),
       type: activity.type,
       distance: activity.distance,

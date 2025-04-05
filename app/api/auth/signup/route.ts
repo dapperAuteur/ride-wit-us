@@ -1,39 +1,38 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/db/mongodb"
-import { UserModel } from "@/lib/db/models/user"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
+import { prisma } from "@/lib/db/prisma"
+import { hash } from "bcryptjs"
+import { sign } from "jsonwebtoken"
 import { cookies } from "next/headers"
 
 export async function POST(request: Request) {
   try {
     const { name, email, password } = await request.json()
 
-    await connectToDatabase()
-
     // Check if user already exists
-    const existingUser = await UserModel.findOne({ email })
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    })
 
     if (existingUser) {
       return NextResponse.json({ message: "User with this email already exists" }, { status: 400 })
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await hash(password, 10)
 
     // Create new user
-    const newUser = new UserModel({
-      name,
-      email,
-      password: hashedPassword,
-      role: "user",
-      subscriptionStatus: "free",
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "USER",
+        subscriptionStatus: "FREE",
+      },
     })
 
-    await newUser.save()
-
     // Create JWT token
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "7d" })
+    const token = sign({ id: newUser.id }, process.env.JWT_SECRET || "fallback_secret", { expiresIn: "7d" })
 
     // Set cookie
     cookies().set({
@@ -48,13 +47,13 @@ export async function POST(request: Request) {
     // Return user data (without password)
     return NextResponse.json({
       user: {
-        id: newUser._id,
+        id: newUser.id,
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
         subscriptionStatus: newUser.subscriptionStatus,
-        createdAt: newUser.createdAt,
-        updatedAt: newUser.updatedAt,
+        createdAt: newUser.createdAt.toISOString(),
+        updatedAt: newUser.updatedAt.toISOString(),
       },
     })
   } catch (error) {

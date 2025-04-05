@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check } from "lucide-react"
-import { type PricingTier, currentPricing } from "@/lib/pricing"
 import { loadStripe } from "@stripe/stripe-js"
+import type { PricingTier } from "@/lib/pricing"
 
 // Make sure to add your publishable key
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "")
@@ -14,6 +14,23 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 export default function PricingPlans() {
   const { user } = useAuth()
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([])
+
+  useEffect(() => {
+    const fetchPricingTiers = async () => {
+      try {
+        const response = await fetch("/api/admin/pricing")
+        if (response.ok) {
+          const data = await response.json()
+          setPricingTiers(data.pricingTiers)
+        }
+      } catch (error) {
+        console.error("Error fetching pricing tiers:", error)
+      }
+    }
+
+    fetchPricingTiers()
+  }, [])
 
   const handleSubscribe = async (plan: PricingTier) => {
     if (!user) {
@@ -21,7 +38,7 @@ export default function PricingPlans() {
       return
     }
 
-    if (plan.id === "free") {
+    if (plan.price === 0) {
       // Handle free plan subscription
       try {
         const response = await fetch("/api/subscription/downgrade", {
@@ -66,12 +83,24 @@ export default function PricingPlans() {
   }
 
   const isCurrentPlan = (planId: string) => {
-    return user?.subscriptionStatus === planId
+    if (!user) return false
+
+    const planMap: Record<string, boolean> = {
+      FREE: user.subscriptionStatus === "FREE",
+      MONTHLY: user.subscriptionStatus === "MONTHLY",
+      ANNUAL: user.subscriptionStatus === "ANNUAL",
+    }
+
+    return planMap[planId] || false
+  }
+
+  if (pricingTiers.length === 0) {
+    return <div>Loading pricing plans...</div>
   }
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
-      {currentPricing.map((plan) => (
+      {pricingTiers.map((plan) => (
         <Card key={plan.id} className={`flex flex-col ${isCurrentPlan(plan.id) ? "border-primary" : ""}`}>
           <CardHeader>
             <CardTitle>{plan.name}</CardTitle>

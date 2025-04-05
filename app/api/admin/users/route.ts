@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/db/mongodb"
-import { UserModel } from "@/lib/db/models/user"
-import jwt from "jsonwebtoken"
+import { prisma } from "@/lib/db/prisma"
+import { verify } from "jsonwebtoken"
 import { cookies } from "next/headers"
-import bcrypt from "bcryptjs"
+import { hash } from "bcryptjs"
 
 // GET all users (admin/manager only)
 export async function GET() {
@@ -15,35 +14,43 @@ export async function GET() {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
-
-    await connectToDatabase()
+    const decoded = verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
 
     // Find user by ID
-    const user = await UserModel.findById(decoded.id)
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    })
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
     // Check if user is admin or manager
-    if (user.role !== "admin" && user.role !== "manager") {
+    if (user.role !== "ADMIN" && user.role !== "MANAGER") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 403 })
     }
 
     // Get all users
-    const users = await UserModel.find({}).select("-password").sort({ createdAt: -1 }).lean()
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        subscriptionStatus: true,
+        subscriptionExpiry: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
 
-    // Transform MongoDB documents to plain objects
+    // Transform dates to strings
     const transformedUsers = users.map((user) => ({
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      subscriptionStatus: user.subscriptionStatus,
-      subscriptionExpiry: user.subscriptionExpiry,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      ...user,
+      subscriptionExpiry: user.subscriptionExpiry?.toISOString(),
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     }))
 
     return NextResponse.json({ users: transformedUsers })
@@ -63,60 +70,62 @@ export async function POST(request: Request) {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
-
-    await connectToDatabase()
+    const decoded = verify(token, process.env.JWT_SECRET || "fallback_secret") as { id: string }
 
     // Find user by ID
-    const currentUser = await UserModel.findById(decoded.id)
+    const currentUser = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    })
 
     if (!currentUser) {
       return NextResponse.json({ message: "User not found" }, { status: 404 })
     }
 
     // Check if user is admin or manager
-    if (currentUser.role !== "admin" && currentUser.role !== "manager") {
+    if (currentUser.role !== "ADMIN" && currentUser.role !== "MANAGER") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 403 })
     }
 
     const { name, email, password, role } = await request.json()
 
     // Validate role (managers can only create users)
-    if (currentUser.role === "manager" && role !== "user") {
+    if (currentUser.role === "MANAGER" && role !== "USER") {
       return NextResponse.json({ message: "Managers can only create users" }, { status: 403 })
     }
 
     // Check if user already exists
-    const existingUser = await UserModel.findOne({ email })
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    })
 
     if (existingUser) {
       return NextResponse.json({ message: "User with this email already exists" }, { status: 400 })
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await hash(password, 10)
 
     // Create new user
-    const newUser = new UserModel({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      subscriptionStatus: "free",
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: role as any,
+        subscriptionStatus: "FREE",
+      },
     })
-
-    await newUser.save()
 
     // Return user data (without password)
     return NextResponse.json({
       user: {
-        id: newUser._id,
+        id: newUser.id,
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
         subscriptionStatus: newUser.subscriptionStatus,
-        createdAt: newUser.createdAt,
-        updatedAt: newUser.updatedAt,
+        createdAt: newUser.createdAt.toISOString(),
+        updatedAt: newUser.updatedAt.toISOString(),
       },
     })
   } catch (error) {

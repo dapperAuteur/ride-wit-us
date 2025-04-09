@@ -14,4 +14,3 @@ export function formatDate(dateString: string, includeYear = false): string {
     day: "numeric",
   })
 }
-

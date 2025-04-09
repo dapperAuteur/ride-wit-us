@@ -73,4 +73,3 @@ enum Interval {
   month
   year
 }
-

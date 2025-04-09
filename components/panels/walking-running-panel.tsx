@@ -43,4 +43,3 @@ export default function WalkingRunningPanel({ activities }: WalkingRunningPanelP
     </Card>
   )
 }
-

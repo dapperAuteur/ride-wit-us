@@ -55,4 +55,3 @@ export function generatePlaceholderData(): ActivityData[] {
   // Sort by date (newest first)
   return activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 }
-

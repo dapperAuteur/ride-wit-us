@@ -76,4 +76,3 @@ export default function ActivityStats({ activities, type }: ActivityStatsProps) 
     </div>
   )
 }
-

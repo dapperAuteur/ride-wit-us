@@ -157,4 +157,3 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
     </Card>
   )
 }
-

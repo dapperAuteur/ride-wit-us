@@ -17,6 +17,7 @@ const publicPaths = [
   "/api/db-setup",
   "/api/db-seed",
   "/api/db-query",
+  "/api/auth/create-admin",
 ]
 
 export function middleware(request: NextRequest) {
@@ -64,5 +65,6 @@ export const config = {
      */
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
+  // Specify that this middleware should not run in the Edge Runtime
+  runtime: "nodejs",
 }
-

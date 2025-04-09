@@ -74,4 +74,3 @@ export default function SettingsDialog({ open, onOpenChange, settings, onSetting
     </Dialog>
   )
 }
-

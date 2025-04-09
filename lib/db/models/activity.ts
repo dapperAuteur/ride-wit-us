@@ -46,4 +46,3 @@ ActivitySchema.pre("save", function (next) {
 })
 
 export const ActivityModel = mongoose.models.Activity || mongoose.model("Activity", ActivitySchema)
-

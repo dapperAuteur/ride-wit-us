@@ -158,4 +158,3 @@ export default function DataSync({ activities, onUpdateActivities }: DataSyncPro
     </Card>
   )
 }
-

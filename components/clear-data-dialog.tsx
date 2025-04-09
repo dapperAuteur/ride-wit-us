@@ -35,4 +35,3 @@ export default function ClearDataDialog({ open, onOpenChange, onConfirm }: Clear
     </AlertDialog>
   )
 }
-

@@ -43,4 +43,3 @@ export default function BikingPanel({ activities }: BikingPanelProps) {
     </Card>
   )
 }
-

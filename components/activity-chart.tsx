@@ -129,4 +129,3 @@ export default function ActivityChart({ activities, type }: ActivityChartProps) 
     </Card>
   )
 }
-

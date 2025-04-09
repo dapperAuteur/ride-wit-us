@@ -9,4 +9,3 @@ export interface ActivityData {
   maintenanceCost?: number
   notes?: string
 }
-

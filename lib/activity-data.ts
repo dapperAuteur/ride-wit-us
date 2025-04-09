@@ -63,4 +63,3 @@ export function calculateAverageSpeed(activities: ActivityData[]): number {
 export function calculateTotalMaintenanceCost(activities: ActivityData[]): number {
   return activities.reduce((sum, activity) => sum + (activity.maintenanceCost || 0), 0)
 }
-

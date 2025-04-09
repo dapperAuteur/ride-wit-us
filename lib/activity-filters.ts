@@ -13,4 +13,3 @@ export function filterActivitiesByTimeRange(activities: ActivityData[], days: nu
     return activityDate >= cutoffDate
   })
 }
-

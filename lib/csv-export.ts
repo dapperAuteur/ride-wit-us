@@ -38,4 +38,3 @@ export function exportToCSV(activities: ActivityData[]): void {
   link.click()
   document.body.removeChild(link)
 }
-

@@ -22,4 +22,3 @@ export function convertDistance(distance: number, fromUnit: "miles" | "km", toUn
   if (fromUnit === toUnit) return distance
   return fromUnit === "miles" ? milesToKm(distance) : kmToMiles(distance)
 }
-

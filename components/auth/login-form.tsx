@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Loader2 } from "lucide-react"
+import Link from "next/link"
 
 export function LoginForm() {
   const router = useRouter()
@@ -74,7 +75,7 @@ export function LoginForm() {
 
       const data = await response.json()
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
         // Handle specific error codes
         if (data.errorCode === "INVALID_CREDENTIALS") {
           setError("Invalid email or password")
@@ -86,7 +87,7 @@ export function LoginForm() {
       }
 
       // Redirect to dashboard on success
-      router.push("/dashboard")
+      router.push("/")
       router.refresh()
     } catch (error: any) {
       setError(error.message || "An unexpected error occurred")
@@ -146,6 +147,12 @@ export function LoginForm() {
             Log in
           </Button>
         </form>
+
+        <div className="mt-4 text-center">
+          <Link href="/create-admin" className="text-sm text-primary hover:underline">
+            Create/Reset Admin User
+          </Link>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
@@ -158,4 +165,3 @@ export function LoginForm() {
     </Card>
   )
 }
-

@@ -37,4 +37,3 @@ export let currentPricing: PricingTier[] = [
 export const updatePricing = (newPricing: PricingTier[]) => {
   currentPricing = newPricing
 }
-

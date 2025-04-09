@@ -43,4 +43,3 @@ export default function DrivingPanel({ activities }: DrivingPanelProps) {
     </Card>
   )
 }
-

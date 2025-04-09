@@ -8,7 +8,7 @@ interface AuthContextType extends AuthState {
   signUp: (name: string, email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   deleteAccount: () => Promise<void>
-  updateUser: (user: Partial<User>) => Promise<void>
+  updateUser: (user: Partial<User>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      const response = await fetch("/api/auth/signin", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -75,10 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthState((prev) => ({
           ...prev,
           isLoading: false,
-          error: error.message || "Failed to sign in",
+          error: error.error || "Failed to sign in",
         }))
       }
-    } catch (error) {
+    } catch (error: any) {
       setAuthState((prev) => ({
         ...prev,
         isLoading: false,
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,10 +111,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthState((prev) => ({
           ...prev,
           isLoading: false,
-          error: error.message || "Failed to sign up",
+          error: error.error || "Failed to sign up",
         }))
       }
-    } catch (error) {
+    } catch (error: any) {
       setAuthState((prev) => ({
         ...prev,
         isLoading: false,
@@ -142,10 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthState((prev) => ({
           ...prev,
           isLoading: false,
-          error: error.message || "Failed to sign out",
+          error: error.error || "Failed to sign out",
         }))
       }
-    } catch (error) {
+    } catch (error: any) {
       setAuthState((prev) => ({
         ...prev,
         isLoading: false,
@@ -173,10 +173,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthState((prev) => ({
           ...prev,
           isLoading: false,
-          error: error.message || "Failed to delete account",
+          error: error.error || "Failed to delete account",
         }))
       }
-    } catch (error) {
+    } catch (error: any) {
       setAuthState((prev) => ({
         ...prev,
         isLoading: false,
@@ -185,40 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateUser = async (userData: Partial<User>) => {
-    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
+  const updateUser = (userData: Partial<User>) => {
+    if (!authState.user) return
 
-    try {
-      const response = await fetch("/api/auth/update-user", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setAuthState({
-          user: data.user,
-          isLoading: false,
-          error: null,
-        })
-      } else {
-        const error = await response.json()
-        setAuthState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: error.message || "Failed to update user",
-        }))
-      }
-    } catch (error) {
-      setAuthState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: "An unexpected error occurred",
-      }))
-    }
+    setAuthState((prev) => ({
+      ...prev,
+      user: { ...prev.user!, ...userData },
+    }))
   }
 
   return (

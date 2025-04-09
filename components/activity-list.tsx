@@ -8,6 +8,8 @@ import { Edit, ChevronDown, ChevronUp } from "lucide-react"
 import { formatDate } from "@/lib/date-utils"
 import EditActivityDialog from "./edit-activity-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useUnit } from "@/contexts/unit-context"
+import { convertDistance } from "@/lib/unit-conversion"
 
 interface ActivityListProps {
   activities: ActivityData[]
@@ -28,6 +30,7 @@ export default function ActivityList({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const [page, setPage] = useState(1)
   const itemsPerPage = 5
+  const { unit } = useUnit()
 
   const handleSort = (field: keyof ActivityData) => {
     if (sortField === field) {
@@ -81,6 +84,21 @@ export default function ActivityList({
       default:
         return type
     }
+  }
+
+  const getDisplayDistance = (activity: ActivityData) => {
+    const isDriving = activity.type === "driving"
+    let distance = activity.distance
+
+    if (isDriving && unit === "km") {
+      // Convert miles to km for driving
+      distance = convertDistance(distance, "miles", "km")
+    } else if (!isDriving && unit === "miles") {
+      // Convert km to miles for non-driving
+      distance = convertDistance(distance, "km", "miles")
+    }
+
+    return `${distance.toFixed(1)} ${unit}`
   }
 
   return (
@@ -145,9 +163,7 @@ export default function ActivityList({
                 <TableRow key={activity.id}>
                   <TableCell>{formatDate(activity.date, true)}</TableCell>
                   <TableCell>{getActivityTypeLabel(activity.type)}</TableCell>
-                  <TableCell className="text-right">
-                    {activity.distance.toFixed(1)} {activity.type === "driving" ? "mi" : "km"}
-                  </TableCell>
+                  <TableCell className="text-right">{getDisplayDistance(activity)}</TableCell>
                   <TableCell className="text-right">{activity.duration} min</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(activity)}>

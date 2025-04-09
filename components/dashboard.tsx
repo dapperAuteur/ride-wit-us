@@ -21,6 +21,7 @@ import { generatePlaceholderData } from "@/lib/placeholder-data"
 import { useAuth } from "@/contexts/auth-context"
 import DataSync from "./sync/data-sync"
 import MainNav from "./nav/main-nav"
+import UnitToggle from "./unit-toggle"
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -158,6 +159,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Activity Dashboard</h1>
           <div className="flex gap-2">
+            <UnitToggle />
             {isPremiumUser && (
               <Button variant="outline" size="icon" onClick={() => setSyncOpen(!syncOpen)}>
                 <CloudSync className="h-4 w-4" />

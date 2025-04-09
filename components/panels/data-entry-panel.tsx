@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useUnit } from "@/contexts/unit-context"
 
 interface DataEntryPanelProps {
   onAddActivity: (activity: ActivityData) => void
@@ -26,17 +27,30 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
   const [duration, setDuration] = useState("")
   const [maintenanceCost, setMaintenanceCost] = useState("")
   const [notes, setNotes] = useState("")
+  const { unit } = useUnit()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!distance || !duration) return
 
+    // Convert distance if needed
+    let distanceValue = Number.parseFloat(distance)
+
+    // If driving is in km, convert to miles for storage
+    if (type === "driving" && unit === "km") {
+      distanceValue = distanceValue / 1.60934
+    }
+    // If non-driving is in miles, convert to km for storage
+    else if (type !== "driving" && unit === "miles") {
+      distanceValue = distanceValue * 1.60934
+    }
+
     const newActivity: ActivityData = {
       id: Date.now().toString(),
       date: date.toISOString(),
       type,
-      distance: Number.parseFloat(distance),
+      distance: distanceValue,
       duration: Number.parseFloat(duration),
       maintenanceCost: maintenanceCost ? Number.parseFloat(maintenanceCost) : undefined,
       notes,
@@ -92,7 +106,7 @@ export default function DataEntryPanel({ onAddActivity }: DataEntryPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="distance">Distance ({type === "driving" ? "miles" : "km"})</Label>
+            <Label htmlFor="distance">Distance ({unit})</Label>
             <Input
               id="distance"
               type="number"

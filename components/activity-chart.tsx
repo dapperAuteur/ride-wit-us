@@ -5,6 +5,8 @@ import type { ActivityData } from "@/types/activity"
 import { Card } from "@/components/ui/card"
 import { groupActivitiesByDay, calculateDailyTotals } from "@/lib/activity-data"
 import { formatDate } from "@/lib/date-utils"
+import { useUnit } from "@/contexts/unit-context"
+import { convertDistance } from "@/lib/unit-conversion"
 
 interface ActivityChartProps {
   activities: ActivityData[]
@@ -13,6 +15,7 @@ interface ActivityChartProps {
 
 export default function ActivityChart({ activities, type }: ActivityChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { unit } = useUnit()
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -37,8 +40,24 @@ export default function ActivityChart({ activities, type }: ActivityChartProps) 
     const groupedActivities = groupActivitiesByDay(activities)
     const dailyTotals = calculateDailyTotals(groupedActivities)
 
+    // Convert distances based on the selected unit
+    const convertedDailyTotals = dailyTotals.map((day) => {
+      const isDriving = type.includes("driving")
+      let distance = day.distance
+
+      if (isDriving && unit === "km") {
+        // Convert miles to km for driving
+        distance = convertDistance(distance, "miles", "km")
+      } else if (!isDriving && unit === "miles") {
+        // Convert km to miles for non-driving
+        distance = convertDistance(distance, "km", "miles")
+      }
+
+      return { ...day, distance }
+    })
+
     // Find max values for scaling
-    const maxDistance = Math.max(...dailyTotals.map((day) => day.distance), 0.1) // Prevent division by zero
+    const maxDistance = Math.max(...convertedDailyTotals.map((day) => day.distance), 0.1) // Prevent division by zero
 
     // Chart dimensions
     const padding = 40
@@ -62,10 +81,10 @@ export default function ActivityChart({ activities, type }: ActivityChartProps) 
     ctx.stroke()
 
     // Draw bars
-    const barWidth = Math.max(chartWidth / Math.max(dailyTotals.length, 1) - 10, 5)
+    const barWidth = Math.max(chartWidth / Math.max(convertedDailyTotals.length, 1) - 10, 5)
 
-    dailyTotals.forEach((day, index) => {
-      const x = padding + index * (chartWidth / Math.max(dailyTotals.length, 1)) + 5
+    convertedDailyTotals.forEach((day, index) => {
+      const x = padding + index * (chartWidth / Math.max(convertedDailyTotals.length, 1)) + 5
       const barHeight = (day.distance / maxDistance) * chartHeight
       const y = canvas.height - padding - barHeight
 
@@ -83,7 +102,7 @@ export default function ActivityChart({ activities, type }: ActivityChartProps) 
       ctx.fillStyle = "#e5e7eb" // gray-200
       ctx.font = "10px Inter, sans-serif"
       ctx.textAlign = "center"
-      ctx.fillText(day.distance.toFixed(1) + (type.includes("driving") ? " mi" : " km"), x + barWidth / 2, y - 5)
+      ctx.fillText(day.distance.toFixed(1) + " " + unit, x + barWidth / 2, y - 5)
     })
 
     // Draw Y-axis labels
@@ -101,8 +120,8 @@ export default function ActivityChart({ activities, type }: ActivityChartProps) 
     ctx.fillStyle = "#e5e7eb" // gray-200
     ctx.font = "12px Inter, sans-serif"
     ctx.textAlign = "center"
-    ctx.fillText(`Distance (${type.includes("driving") ? "miles" : "km"})`, canvas.width / 2, 15)
-  }, [activities, type])
+    ctx.fillText(`Distance (${unit})`, canvas.width / 2, 15)
+  }, [activities, type, unit])
 
   return (
     <Card className="p-2 mb-4">

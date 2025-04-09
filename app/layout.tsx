@@ -4,8 +4,9 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
+import { UnitProvider } from "@/contexts/unit-context"
+import { Analytics } from "@vercel/analytics/react"
 import ConsoltoChat from "@/components/ConsoltoChat"
-import { Analytics } from '@vercel/analytics/react';
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,16 +26,14 @@ export default function RootLayout({
       <body className={`${inter.className} dark`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
-            {children}
-            <Analytics />
-            <ConsoltoChat />
+            <UnitProvider>
+              {children}
+              <Analytics />
+              <ConsoltoChat />
+            </UnitProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
   )
 }
-
-
-
-import './globals.css'

@@ -9,7 +9,7 @@
 //   MAILGUN_API_KEY      — required for actual sending; private API key
 //   MAILGUN_DOMAIN       — defaults to "mg.witus.online"
 //   MAILGUN_REGION       — "us" (default) or "eu"
-//   MAILGUN_FROM         — defaults to "RideWitUS <noreply@${MAILGUN_DOMAIN}>"
+//   EMAIL_FROM           — From: header; defaults to "RideWitUS <noreply@${MAILGUN_DOMAIN}>"
 //   BAM_NOTIFY_EMAIL     — defaults to bam@awews.com (where form alerts go)
 //
 // Reference: https://documentation.mailgun.com/docs/mailgun/api-reference/openapi-final/tag/Messages/
@@ -37,7 +37,7 @@ function getConfig() {
   const domain = process.env.MAILGUN_DOMAIN ?? DEFAULT_DOMAIN;
   const region = (process.env.MAILGUN_REGION ?? "us").toLowerCase();
   const baseUrl = region === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
-  const from = process.env.MAILGUN_FROM ?? `RideWitUS <noreply@${domain}>`;
+  const from = process.env.EMAIL_FROM ?? `RideWitUS <noreply@${domain}>`;
   const bamNotifyEmail = process.env.BAM_NOTIFY_EMAIL ?? "bam@awews.com";
   return { apiKey, domain, baseUrl, from, bamNotifyEmail };
 }

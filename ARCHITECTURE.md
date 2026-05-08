@@ -126,7 +126,7 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `MAILGUN_API_KEY` | Production | — | Without it, sends are stubbed to stdout |
 | `MAILGUN_DOMAIN` | No | `mg.witus.online` | Ecosystem canonical |
 | `MAILGUN_REGION` | No | `us` | Or `eu` |
-| `MAILGUN_FROM` | No | `RideWitUS <noreply@${MAILGUN_DOMAIN}>` | |
+| `EMAIL_FROM` | No | `RideWitUS <noreply@${MAILGUN_DOMAIN}>` | From: header on outgoing mail |
 | `BAM_NOTIFY_EMAIL` | No | `bam@awews.com` | Where form-submission alerts land |
 | `INBOX_INGEST_URL` | Production | — | WitUS Inbox HMAC ingest endpoint |
 | `INBOX_INGEST_SECRET` | Production | — | HMAC-SHA256 signing key for Inbox |

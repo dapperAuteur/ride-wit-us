@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail, getBamNotifyEmail, type MailgunResult } from "@/lib/mailgun";
+import { sendToInbox, type WitusSendResult } from "@/lib/witus-sender";
 import { APP_NAME } from "@/lib/site-meta";
 import { episodeBySlug } from "@/lib/curriculum/episodes";
 import { seasonOf } from "@/lib/curriculum/season-colors";
@@ -180,6 +181,7 @@ export async function POST(req: NextRequest) {
   };
 
   let mailResults: MailgunResult[] = [];
+  let inboxResult: WitusSendResult | null = null;
 
   try {
     if (formType === "class_notify_signup") {
@@ -222,18 +224,30 @@ export async function POST(req: NextRequest) {
     } else {
       return NextResponse.json({ ok: false, error: `unknown_form_type:${formType}` }, { status: 400 });
     }
+
+    // After sending email, also forward the raw payload to the WitUS Inbox
+    // so triage has a single cross-product queue. This is fire-and-forget
+    // semantically — if the Inbox is unreachable, we still consider the
+    // form submission successful because the user got their email.
+    inboxResult = await sendToInbox({
+      form_type: formType,
+      ...raw,
+      _source_app: "ridewitus",
+      _received_at: new Date().toISOString(),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "internal_error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 
-  const allOk = mailResults.every((r) => r.ok);
-  const anyStubbed = mailResults.some((r) => r.stubbed);
+  const mailOk = mailResults.every((r) => r.ok);
+  const anyMailStubbed = mailResults.some((r) => r.stubbed);
 
   return NextResponse.json({
-    ok: allOk,
+    ok: mailOk,
     form_type: formType,
-    mail: { count: mailResults.length, stubbed: anyStubbed },
-    ...(allOk ? {} : { errors: mailResults.filter((r) => !r.ok).map((r) => r.error) }),
+    mail: { count: mailResults.length, stubbed: anyMailStubbed },
+    inbox: inboxResult ? { ok: inboxResult.ok, stubbed: !!inboxResult.stubbed } : null,
+    ...(mailOk ? {} : { errors: mailResults.filter((r) => !r.ok).map((r) => r.error) }),
   });
 }

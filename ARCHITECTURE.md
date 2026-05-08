@@ -128,10 +128,14 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `MAILGUN_REGION` | No | `us` | Or `eu` |
 | `MAILGUN_FROM` | No | `RideWitUS <noreply@${MAILGUN_DOMAIN}>` | |
 | `BAM_NOTIFY_EMAIL` | No | `bam@awews.com` | Where form-submission alerts land |
-| `INBOX_INGEST_URL` | Phase 4 | — | Reserved for HMAC forward |
-| `INBOX_INGEST_SECRET` | Phase 4 | — | HMAC-SHA256 signing key |
-| `OUTBOX_INGEST_URL` | Phase 4 | — | Reserved for episode-publish webhooks |
-| `OUTBOX_INGEST_SECRET` | Phase 4 | — | HMAC-SHA256 signing key |
+| `INBOX_INGEST_URL` | Production | — | WitUS Inbox HMAC ingest endpoint |
+| `INBOX_INGEST_SECRET` | Production | — | HMAC-SHA256 signing key for Inbox |
+| `INBOX_SOURCE_SLUG` | Production | — | This app's source identity (e.g., `ridewitus`) |
+| `OUTBOX_INGEST_URL` | Production | — | WitUS Outbox HMAC ingest endpoint |
+| `OUTBOX_INGEST_SECRET` | Production | — | HMAC-SHA256 signing key for general posts |
+| `OUTBOX_SOURCE_SLUG` | Production | — | Source identity for generic Outbox posts |
+| `OUTBOX_PODCAST_RWU_SECRET` | Production | — | Separate secret for podcast publish channel (so it can be rotated independently) |
+| `OUTBOX_PODCAST_RWU_SLUG` | Production | — | Source identity for podcast Outbox posts |
 
 Per ecosystem convention, provision via `vercel env add` rather than committing `.env*` files. `.env*` is in `.gitignore`.
 

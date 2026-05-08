@@ -4,8 +4,8 @@ import { Analytics } from "@vercel/analytics/react";
 import { SITE_URL, APP_NAME, APP_DESCRIPTION } from "@/lib/site-meta";
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0d",
-  colorScheme: "dark",
+  themeColor: "#f4ecd8",
+  colorScheme: "light",
 };
 
 export const metadata: Metadata = {
@@ -50,10 +50,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen flex flex-col">
+      <body data-design="monon-chalk" className="antialiased min-h-screen flex flex-col">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-slate-950 focus:font-semibold focus:rounded-lg"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#221E1B] focus:text-[#f4ecd8] focus:font-semibold focus:rounded-lg"
         >
           Skip to content
         </a>

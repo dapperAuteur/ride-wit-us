@@ -4,7 +4,7 @@ import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { SEASONS, APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
 import { EPISODES } from "@/lib/curriculum/episodes";
 
-const BASE = "/design/folder-and-frame";
+const BASE = "/styleguide/folder-and-frame";
 
 export default function FolderAndFrameLanding() {
   return (
@@ -30,10 +30,10 @@ export default function FolderAndFrameLanding() {
                   Catalog →
                 </Link>
                 <Link
-                  href="/design"
+                  href="/styleguide"
                   className="text-sm text-[#0f0f10] hover:text-[#E25A1C] underline underline-offset-4"
                 >
-                  Compare directions
+                  Styleguide archive
                 </Link>
               </div>
             </div>

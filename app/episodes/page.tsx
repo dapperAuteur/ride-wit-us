@@ -1,52 +1,47 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader, HEADER_THEMES } from "@/components/site-header";
+import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { EPISODES } from "@/lib/curriculum/episodes";
 import { APRON_COLORS, APRON_LABELS, SEASONS } from "@/lib/curriculum/season-colors";
 
-export const metadata = {
-  title: "All episodes",
-  description: "Every episode in the RideWitUS curriculum, organized by season.",
-};
+const STICKER_COLORS = ["#F4B44A", "#D33E2D", "#5C8AA5", "#3E7C3A"];
+
+export const metadata = { title: "Episodes" };
 
 export default function EpisodesPage() {
   return (
     <>
-      <SiteHeader />
+      <SiteHeader theme={HEADER_THEMES.chalk} />
       <article className="flex-1">
         <div className="max-w-5xl mx-auto px-6 py-16">
-          <p className="text-xs uppercase tracking-[0.2em] text-amber-300 mb-3">Catalog</p>
-          <h1 className="text-4xl font-semibold text-white">All 32 episodes</h1>
-          <p className="text-slate-400 mt-3 max-w-2xl">Four seasons, ~7 episodes each plus a synthesis episode. Audio-first, 35–40 minutes each, with cut-point markers so instructors can extract per-skill clips.</p>
+          <span className="sticker px-3 py-1 text-xs uppercase tracking-wider rotate-[-1deg]">Catalog</span>
+          <h1 className="font-display text-6xl text-[#221E1B] mt-4 leading-[0.95]">All 32 episodes.</h1>
+          <p className="text-[#221E1B]/80 mt-3 max-w-2xl">Pinned to a community board. Pick one off the wall.</p>
 
-          {SEASONS.map((s) => (
-            <section key={s.number} id={`season-${s.number}`} className="mt-12 scroll-mt-24">
-              <header className="flex items-baseline justify-between gap-4 mb-4 border-b border-slate-800 pb-2">
-                <h2 className="text-xl font-semibold text-white">
-                  <Link href={`/seasons/${s.number}`} className="hover:text-amber-300">
-                    Season {s.number} — {s.title}
-                  </Link>
+          {SEASONS.map((s, si) => (
+            <section key={s.number} id={`season-${s.number}`} className="mt-14 scroll-mt-24">
+              <header className="mb-5">
+                <span className="sticker px-3 py-1 text-xs uppercase tracking-wider" style={{ background: STICKER_COLORS[si] }}>
+                  Season {s.number}
+                </span>
+                <h2 className="font-display text-3xl font-bold text-[#221E1B] mt-3">
+                  <Link href={`/seasons/${s.number}`} className="hover:underline decoration-[#D33E2D] decoration-2">{s.title}</Link>
                 </h2>
-                <span className="text-xs text-slate-500">{s.tagline}</span>
+                <p className="text-sm text-[#221E1B]/70">{s.tagline}</p>
               </header>
-              <ul className="grid sm:grid-cols-2 gap-3">
-                {EPISODES.filter((e) => e.season === s.number).map((e) => (
+
+              <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {EPISODES.filter((e) => e.season === s.number).map((e, i) => (
                   <li key={e.slug}>
                     <Link
                       href={`/episodes/${e.slug}`}
-                      className="block rounded-md border border-slate-800 bg-slate-900/40 p-4 hover:border-amber-300 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                      className="block border-2 border-[#221E1B] bg-[#fff8e8] p-4 hover:translate-y-[-3px] transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#221E1B]"
+                      style={{ boxShadow: `4px 4px 0 ${STICKER_COLORS[(si + i) % 4]}` }}
                     >
-                      <div className="flex items-baseline justify-between gap-2 mb-1">
-                        <span className="font-mono text-[11px] text-slate-500">S{e.season}·E{String(e.ep).padStart(2, "0")}</span>
-                        <span
-                          className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border"
-                          style={{ color: APRON_COLORS[e.apronLevel], borderColor: APRON_COLORS[e.apronLevel] }}
-                        >
-                          {APRON_LABELS[e.apronLevel]}
-                        </span>
-                      </div>
-                      <p className="font-semibold text-white">{e.title}</p>
-                      {e.subtitle && <p className="text-sm text-slate-400 mt-1">{e.subtitle}</p>}
+                      <p className="font-mono text-[11px] text-[#221E1B]/60">S{e.season}·E{String(e.ep).padStart(2, "0")}</p>
+                      <p className="font-display text-xl font-bold text-[#221E1B] mt-2 leading-tight">{e.title}</p>
+                      {e.subtitle && <p className="text-xs text-[#221E1B]/70 mt-2">{e.subtitle}</p>}
+                      <p className="text-[10px] font-mono uppercase tracking-wider mt-3" style={{ color: APRON_COLORS[e.apronLevel] }}>{APRON_LABELS[e.apronLevel]}</p>
                     </Link>
                   </li>
                 ))}
@@ -55,7 +50,7 @@ export default function EpisodesPage() {
           ))}
         </div>
       </article>
-      <SiteFooter />
+      <SiteFooter theme={FOOTER_THEMES.chalk} />
     </>
   );
 }

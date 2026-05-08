@@ -1,26 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader, HEADER_THEMES } from "@/components/site-header";
+import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { EPISODES, episodeBySlug } from "@/lib/curriculum/episodes";
 import { APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
+
+const STICKER_COLORS = ["#F4B44A", "#D33E2D", "#5C8AA5", "#3E7C3A"];
 
 export function generateStaticParams() {
   return EPISODES.map((e) => ({ slug: e.slug }));
 }
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
-}
+interface PageProps { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
   const e = episodeBySlug(slug);
   if (!e) return {};
-  return {
-    title: `S${e.season}·E${e.ep} — ${e.title}`,
-    description: e.subtitle ?? e.body,
-  };
+  return { title: `S${e.season}·E${e.ep} — ${e.title}`, description: e.subtitle ?? e.body };
 }
 
 export default async function EpisodePage({ params }: PageProps) {
@@ -31,76 +28,68 @@ export default async function EpisodePage({ params }: PageProps) {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader theme={HEADER_THEMES.chalk} />
       <article className="flex-1">
-        <header className="border-b border-slate-800" style={{ background: `linear-gradient(180deg, ${accent}26, transparent)` }}>
-          <div className="max-w-3xl mx-auto px-6 py-16">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              <Link href={`/seasons/${e.season}`} className="hover:text-amber-300">Season {e.season}</Link>
-              <span className="mx-2">·</span>
-              Episode {e.ep}
-            </p>
-            <h1 className="text-4xl font-semibold tracking-tight text-white mt-2">{e.title}</h1>
-            {e.subtitle && <p className="text-lg mt-3" style={{ color: accent }}>{e.subtitle}</p>}
-            <span
-              className="inline-flex mt-6 items-center px-3 py-1 rounded-full text-xs font-medium border"
-              style={{ color: accent, borderColor: accent }}
-            >
-              {APRON_LABELS[e.apronLevel]}
-            </span>
-          </div>
-        </header>
+        <div className="max-w-3xl mx-auto px-6 py-16">
+          <Link href="/episodes" className="sticker px-3 py-1 text-xs uppercase tracking-wider rotate-[-1deg] inline-block mb-6">← Catalog</Link>
+          <p className="font-mono text-[11px] uppercase tracking-wider text-[#221E1B]/60">
+            <Link href={`/seasons/${e.season}`} className="hover:underline">Season {e.season}</Link>
+            <span className="mx-2">·</span>
+            S{e.season}·E{String(e.ep).padStart(2, "0")}
+          </p>
+          <h1 className="font-display text-6xl text-[#221E1B] leading-[0.95] mt-2">{e.title}</h1>
+          {e.subtitle && <p className="font-display text-2xl mt-4" style={{ color: accent }}>{e.subtitle}</p>}
 
-        <div className="max-w-3xl mx-auto px-6 py-12">
-          {/* Audio embed placeholder */}
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-5 flex items-center gap-4">
-            <div className="size-12 rounded-full grid place-items-center bg-amber-300 text-slate-950 font-bold">▶</div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <span className="sticker px-3 py-1 text-xs uppercase tracking-wider" style={{ background: accent, color: "#f4ecd8" }}>{APRON_LABELS[e.apronLevel]}</span>
+            <span className="sticker px-3 py-1 text-xs uppercase tracking-wider" style={{ background: "#fff8e8" }}>{e.status}</span>
+          </div>
+
+          <div className="border-2 border-[#221E1B] bg-[#fff8e8] mt-12 p-5 flex items-center gap-4" style={{ boxShadow: "6px 6px 0 #D33E2D" }}>
+            <div className="size-14 grid place-items-center bg-[#221E1B] text-[#f4ecd8] text-2xl font-bold border-2 border-[#221E1B]">▶</div>
             <div>
-              <p className="font-semibold text-white">Listen to this episode</p>
-              <p className="text-xs text-slate-400">Audio embed pending. Episode is in <span className="font-mono">{e.status}</span> status.</p>
+              <p className="font-display text-xl font-bold text-[#221E1B]">Listen on the porch</p>
+              <p className="font-mono text-[10px] text-[#221E1B]/70">audio embed pending · published when status flips</p>
             </div>
           </div>
 
-          {/* Body */}
-          <p className="mt-10 text-lg text-slate-300 leading-relaxed">{e.body}</p>
+          <p className="mt-12 text-lg text-[#221E1B] leading-relaxed">{e.body}</p>
 
-          {/* Four CTAs */}
-          <h2 className="mt-12 text-xl font-semibold text-white">Take it further</h2>
-          <ul className="mt-4 grid sm:grid-cols-2 gap-3">
-            <CTA title="Take the class" body="Structured lesson in CentOS Academy with quizzes and completion." href={e.academyLessonId ? `https://centenarianos.com/academy/lessons/${e.academyLessonId}` : "https://centenarianos.com/academy"} placeholder={!e.academyLessonId} />
-            <CTA title="Drill the vocab" body="One spaced-repetition flashcard set on FlashLearnAI." href={e.flashlearnSetId ? `https://flashlearnai.witus.online/sets/${e.flashlearnSetId}` : "https://flashlearnai.witus.online"} placeholder={!e.flashlearnSetId} />
-            <CTA title="Ride the route" body="360° virtual tour of the route featured in this episode." href={e.wanderlearnTourId ? `https://wanderlearn.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlearn.witus.online"} placeholder={!e.wanderlearnTourId} />
-            <CTA title="Listen elsewhere" body="Apple, Spotify, Overcast (links pending podcast directory submission)." href="#" placeholder />
+          <h2 className="font-display text-3xl text-[#221E1B] mt-16 mb-4">Take it further</h2>
+          <ul className="grid sm:grid-cols-2 gap-4">
+            <CTA color={STICKER_COLORS[0]} title="Take the class" body="CentOS Academy lesson with quizzes." href={e.academyLessonId ? `https://centenarianos.com/academy/lessons/${e.academyLessonId}` : "https://centenarianos.com/academy"} placeholder={!e.academyLessonId} />
+            <CTA color={STICKER_COLORS[2]} title="Drill the vocab" body="One spaced-rep deck on FlashLearnAI." href={e.flashlearnSetId ? `https://flashlearnai.witus.online/sets/${e.flashlearnSetId}` : "https://flashlearnai.witus.online"} placeholder={!e.flashlearnSetId} />
+            <CTA color={STICKER_COLORS[3]} title="Ride the route" body="360° ride on Wanderlearn." href={e.wanderlearnTourId ? `https://wanderlearn.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlearn.witus.online"} placeholder={!e.wanderlearnTourId} />
+            <CTA color={STICKER_COLORS[1]} title="Get notified" body="Subscribe to alerts for episodes you care about." href="/tune-in" />
           </ul>
 
-          {/* Cut points placeholder */}
-          <h2 className="mt-12 text-xl font-semibold text-white">Cut points for instructors</h2>
-          <p className="text-sm text-slate-400 mt-2">When the episode is scripted, this section lists the [CUT POINT] markers — start/end timestamps for per-subject extracts.</p>
+          <h2 className="font-display text-3xl text-[#221E1B] mt-16 mb-2">Cut points</h2>
+          <p className="font-mono text-xs text-[#221E1B]/70">[CUT POINT] markers ship with the published audio. Pending.</p>
 
-          {/* Transcript placeholder */}
-          <h2 className="mt-12 text-xl font-semibold text-white">Transcript</h2>
-          <p className="text-sm text-slate-400 mt-2">Full transcript ships with the published audio. Pending.</p>
+          <h2 className="font-display text-3xl text-[#221E1B] mt-12 mb-2">Transcript</h2>
+          <p className="font-mono text-xs text-[#221E1B]/70">Full transcript ships with the published audio. Pending.</p>
         </div>
       </article>
-      <SiteFooter />
+      <SiteFooter theme={FOOTER_THEMES.chalk} />
     </>
   );
 }
 
-function CTA({ title, body, href, placeholder }: { title: string; body: string; href: string; placeholder?: boolean }) {
+function CTA({ color, title, body, href, placeholder }: { color: string; title: string; body: string; href: string; placeholder?: boolean }) {
   return (
     <li>
       <a
         href={href}
         target={href.startsWith("http") ? "_blank" : undefined}
         rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
-        className="block rounded-md border border-slate-800 bg-slate-900/40 p-4 hover:border-amber-300 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        className="block border-2 border-[#221E1B] bg-[#fff8e8] p-4 hover:translate-y-[-3px] transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#221E1B]"
+        style={{ boxShadow: `4px 4px 0 ${color}` }}
       >
-        <p className="font-semibold text-white flex items-center gap-2">
+        <p className="font-display text-xl font-bold text-[#221E1B] flex items-center gap-2">
           {title}
-          {placeholder && <span className="text-[10px] uppercase tracking-wide text-slate-500 border border-slate-700 px-1.5 py-0.5 rounded">pending</span>}
+          {placeholder && <span className="text-[10px] font-mono uppercase tracking-wide text-[#221E1B]/60 border border-[#221E1B]/60 px-1.5 py-0.5">pending</span>}
         </p>
-        <p className="text-sm text-slate-400 mt-1">{body}</p>
+        <p className="text-sm text-[#221E1B]/80 mt-2">{body}</p>
       </a>
     </li>
   );

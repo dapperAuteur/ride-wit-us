@@ -54,6 +54,15 @@ export function SiteHeader({ theme = defaultTheme, basePath = "" }: SiteHeaderPr
             Seasons
           </Link>
           <Link
+            href={basePath ? `${basePath}/tune-in` : "/tune-in"}
+            className={cn(
+              "inline-flex items-center min-h-11 px-3 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded",
+              theme.link
+            )}
+          >
+            Tune in
+          </Link>
+          <Link
             href={basePath ? `${basePath}/about` : "/about"}
             className={cn(
               "inline-flex items-center min-h-11 px-3 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded",
@@ -61,15 +70,6 @@ export function SiteHeader({ theme = defaultTheme, basePath = "" }: SiteHeaderPr
             )}
           >
             About
-          </Link>
-          <Link
-            href="/design"
-            className={cn(
-              "inline-flex items-center min-h-11 px-3 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded",
-              theme.link
-            )}
-          >
-            Design
           </Link>
         </nav>
       </div>

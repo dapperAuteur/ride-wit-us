@@ -87,8 +87,8 @@ export function SiteFooter({ theme = defaultTheme, basePath = "" }: SiteFooterPr
               <li><Link href={basePath || "/"} className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>Home</Link></li>
               <li><Link href={`${basePath}/episodes`} className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>Episodes</Link></li>
               <li><Link href={`${basePath}/episodes#season-1`} className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>Seasons</Link></li>
+              <li><Link href={basePath ? `${basePath}/tune-in` : "/tune-in"} className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>Tune in</Link></li>
               <li><Link href={basePath ? `${basePath}/about` : "/about"} className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>About</Link></li>
-              <li><Link href="/design" className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>Design directions</Link></li>
             </ul>
           </div>
 

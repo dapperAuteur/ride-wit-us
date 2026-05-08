@@ -5,7 +5,7 @@ import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { EPISODES, episodeBySlug } from "@/lib/curriculum/episodes";
 import { APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
 
-const BASE = "/design/workshop-apron";
+const BASE = "/styleguide/workshop-apron";
 
 export function generateStaticParams() {
   return EPISODES.map((e) => ({ slug: e.slug }));

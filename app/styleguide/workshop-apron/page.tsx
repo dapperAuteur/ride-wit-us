@@ -4,7 +4,7 @@ import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { SEASONS, APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
 import { EPISODES } from "@/lib/curriculum/episodes";
 
-const BASE = "/design/workshop-apron";
+const BASE = "/styleguide/workshop-apron";
 
 export default function WorkshopApronLanding() {
   return (
@@ -31,10 +31,10 @@ export default function WorkshopApronLanding() {
                 Open the catalog →
               </Link>
               <Link
-                href="/design"
+                href="/styleguide"
                 className="inline-flex items-center px-5 py-3 border-2 border-[#1a1a1a] text-[#1a1a1a] font-semibold hover:bg-[#1a1a1a] hover:text-[#f5ead0] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a1a1a]"
               >
-                Compare directions
+                Styleguide archive
               </Link>
             </div>
           </div>

@@ -4,7 +4,7 @@ import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { EPISODES } from "@/lib/curriculum/episodes";
 import { APRON_COLORS, APRON_LABELS, SEASONS } from "@/lib/curriculum/season-colors";
 
-const BASE = "/design/folder-and-frame";
+const BASE = "/styleguide/folder-and-frame";
 
 export const metadata = { title: "Catalog · Folder & Frame" };
 

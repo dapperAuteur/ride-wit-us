@@ -6,8 +6,6 @@ import { COMMUNITY_EVENTS } from "@/lib/community-events";
 import { EPISODES } from "@/lib/curriculum/episodes";
 import { APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
 
-const BASE = "/design/monon-chalk";
-
 interface EcosystemLink {
   label: string;
   body: string;
@@ -68,17 +66,15 @@ const ECOSYSTEM_LINKS: EcosystemLink[] = [
   },
 ];
 
-export const metadata = { title: "Tune in · Monon Chalk" };
+export const metadata = { title: "Tune in" };
 
-export default function MononChalkTuneIn() {
-  // Pick the first published episode if any exist; otherwise the first planned one.
+export default function TuneInPage() {
   const featured = EPISODES.find((e) => e.status === "published") ?? EPISODES[0];
 
   return (
     <>
-      <SiteHeader theme={HEADER_THEMES.chalk} basePath={BASE} />
+      <SiteHeader theme={HEADER_THEMES.chalk} />
       <article className="flex-1">
-        {/* Hero */}
         <section className="border-b-4 border-dashed border-[#221E1B]">
           <div className="max-w-5xl mx-auto px-6 py-16">
             <span className="sticker px-3 py-1 text-xs uppercase tracking-wider rotate-[-2deg] inline-block mb-4">Tune in</span>
@@ -93,7 +89,6 @@ export default function MononChalkTuneIn() {
           </div>
         </section>
 
-        {/* Continue across the ecosystem */}
         <section>
           <div className="max-w-5xl mx-auto px-6 py-16">
             <h2 className="font-display text-4xl text-[#221E1B] mb-2">Continue across the ecosystem.</h2>
@@ -118,7 +113,6 @@ export default function MononChalkTuneIn() {
           </div>
         </section>
 
-        {/* Notify-me form */}
         <section className="border-t-4 border-dashed border-[#221E1B]">
           <div className="max-w-5xl mx-auto px-6 py-16">
             <h2 className="font-display text-4xl text-[#221E1B] mb-2">Get notified when an episode drops.</h2>
@@ -127,7 +121,6 @@ export default function MononChalkTuneIn() {
           </div>
         </section>
 
-        {/* Latest / featured episode */}
         <section className="border-t-4 border-dashed border-[#221E1B]">
           <div className="max-w-5xl mx-auto px-6 py-16">
             <h2 className="font-display text-4xl text-[#221E1B] mb-2">Latest on the porch.</h2>
@@ -146,7 +139,7 @@ export default function MononChalkTuneIn() {
                   <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border-2 border-[#221E1B]/50 text-[#221E1B]/70">
                     {featured.status}
                   </span>
-                  <Link href={`${BASE}/episodes/${featured.slug}`} className="ml-auto text-sm font-bold underline underline-offset-4 decoration-[#D33E2D] decoration-2 hover:text-[#D33E2D]">
+                  <Link href={`/episodes/${featured.slug}`} className="ml-auto text-sm font-bold underline underline-offset-4 decoration-[#D33E2D] decoration-2 hover:text-[#D33E2D]">
                     Full episode page →
                   </Link>
                 </div>
@@ -155,7 +148,6 @@ export default function MononChalkTuneIn() {
           </div>
         </section>
 
-        {/* Show up in person */}
         <section className="border-t-4 border-dashed border-[#221E1B]">
           <div className="max-w-5xl mx-auto px-6 py-16">
             <h2 className="font-display text-4xl text-[#221E1B] mb-2">Show up in person.</h2>
@@ -172,7 +164,6 @@ export default function MononChalkTuneIn() {
           </div>
         </section>
 
-        {/* Bring this to your block */}
         <section className="border-t-4 border-dashed border-[#221E1B]">
           <div className="max-w-5xl mx-auto px-6 py-16">
             <h2 className="font-display text-4xl text-[#221E1B] mb-2">Bring this to your block.</h2>
@@ -181,26 +172,16 @@ export default function MononChalkTuneIn() {
           </div>
         </section>
       </article>
-      <SiteFooter theme={FOOTER_THEMES.chalk} basePath={BASE} />
+      <SiteFooter theme={FOOTER_THEMES.chalk} />
     </>
   );
 }
 
-// Server-rendered HTML form (no client-side state needed). Submits to the
-// same /api/inbox-ingest endpoint with a different form_type. Requires no
-// JS to function — the user gets a JSON response on submit; in v2 we'll add
-// a thank-you redirect.
 function HostListenPartyForm() {
   return (
     <form
       action="/api/inbox-ingest"
       method="post"
-      // Real submission requires the API to accept form-encoded bodies; the
-      // stub uses JSON. Phase 4 wires both. For prototype, intercepting via
-      // fetch keeps this Server Component (no "use client" needed) — but until
-      // we make it interactive, submitting POST will land at the JSON-only
-      // stub and fail; that's an accepted prototype limitation. The visual
-      // design is the deliverable.
       className="border-2 border-[#221E1B] bg-[#fff8e8] p-6 grid gap-4"
       style={{ boxShadow: "6px 6px 0 #221E1B" }}
     >

@@ -21,13 +21,11 @@ export const DESIGNS: DesignDirection[] = [
     ethos: "Engineering studio meets design museum.",
     variant: "01-orbit",
   },
-  {
-    slug: "monon-chalk",
-    label: "Monon Chalk",
-    ethos: "Neighborhood mural meets ride poster.",
-    variant: "03-type-dot",
-  },
 ];
+
+// Monon Chalk was the chosen direction and now lives at the root (/, /about,
+// /tune-in, /episodes, /seasons). The two non-chosen directions remain at
+// /styleguide/* as a frozen reference; they're not linked from the main nav.
 
 interface DesignSwitcherProps {
   currentSlug?: string;
@@ -46,7 +44,7 @@ export function DesignSwitcher({ currentSlug, className }: DesignSwitcherProps) 
     >
       <span className="opacity-70 mr-2 uppercase tracking-wider">Design preview</span>
       <Link
-        href="/design"
+        href="/styleguide"
         className={cn(
           "px-2 py-1 rounded-md transition-colors hover:bg-white/15 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
           !currentSlug && "bg-white/15"
@@ -59,7 +57,7 @@ export function DesignSwitcher({ currentSlug, className }: DesignSwitcherProps) 
         return (
           <Link
             key={d.slug}
-            href={`/design/${d.slug}`}
+            href={`/styleguide/${d.slug}`}
             className={cn(
               "px-2 py-1 rounded-md transition-colors hover:bg-white/15 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
               active ? "bg-white text-black" : "bg-white/5"

@@ -25,6 +25,20 @@ Full rule with rationale: `/Users/bam/Code_NOiCloud/ai-builds/gemini/witus/CLAUD
 
 ---
 
+## Citation rule — APA 7 in-line + References
+
+All curriculum content (course materials, episode outlines, teacher packets), professional writing (white papers, partnership briefs, partner-facing decks), and business writing (proposals, grant applications, sponsor pitches) in this repo uses **APA 7 in-line citations** with a `## References` section at the end of each document.
+
+In-line: `(Author, Year)` for paraphrases; `(Author, Year, p. X)` for direct quotes; narrative `Author (Year)` when the author is the sentence subject. Organization-as-author: first reference `(Centers for Disease Control and Prevention [CDC], 2024)`, subsequent `(CDC, 2024)`. Undated source: `(Author, n.d.)`.
+
+For the RideWitUS S1+S2+S3+S4 packets specifically: each packet's `mechanics.md`, `engineering.md`, `pedagogy.md`, and `community.md` carries its own References section with only the sources cited in that file. `vocabulary.csv` source column may use the shortened parenthetical (e.g., `Park Tool, 2020`) with the full reference in the packet's `mechanics.md`.
+
+**Out of scope** (no APA needed): code comments, ARCHITECTURE.md, README.md, plans/user-tasks files, plans/BACKLOG.md, conversation transcripts.
+
+Full rule with rationale: `/Users/bam/Code_NOiCloud/ai-builds/gemini/witus/CLAUDE.md` §"Citation rule — APA 7 in-line + References".
+
+---
+
 ## Branch hygiene — BAM merges, between sessions by default
 
 **Half 1.** End-of-branch contract: branch → commit → push → stop. Claude does not run `git checkout main && git merge`. Never `--force` to shared branches. After push, hand back the branch name + summary and stop.

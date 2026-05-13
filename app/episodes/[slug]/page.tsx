@@ -4,6 +4,7 @@ import { SiteHeader, HEADER_THEMES } from "@/components/site-header";
 import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { EPISODES, episodeBySlug } from "@/lib/curriculum/episodes";
 import { APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
+import { loadScript, type ScriptBlock } from "@/lib/curriculum/scripts";
 
 const STICKER_COLORS = ["#F4B44A", "#D33E2D", "#5C8AA5", "#3E7C3A"];
 
@@ -25,6 +26,7 @@ export default async function EpisodePage({ params }: PageProps) {
   const e = episodeBySlug(slug);
   if (!e) notFound();
   const accent = APRON_COLORS[e.apronLevel];
+  const scriptBlocks = loadScript(e);
 
   return (
     <>
@@ -63,15 +65,48 @@ export default async function EpisodePage({ params }: PageProps) {
             <CTA color={STICKER_COLORS[1]} title="Get notified" body="Subscribe to alerts for episodes you care about." href="/tune-in" />
           </ul>
 
-          <h2 className="font-display text-3xl text-[#221E1B] mt-16 mb-2">Cut points</h2>
-          <p className="font-mono text-xs text-[#221E1B]/70">[CUT POINT] markers ship with the published audio. Pending.</p>
-
-          <h2 className="font-display text-3xl text-[#221E1B] mt-12 mb-2">Transcript</h2>
-          <p className="font-mono text-xs text-[#221E1B]/70">Full transcript ships with the published audio. Pending.</p>
+          <h2 className="font-display text-3xl text-[#221E1B] mt-16 mb-4">Script</h2>
+          {scriptBlocks ? (
+            <ScriptBody blocks={scriptBlocks} accent={accent} />
+          ) : (
+            <p className="font-mono text-xs text-[#221E1B]/70">Script in progress. Available before audio production begins.</p>
+          )}
         </div>
       </article>
       <SiteFooter theme={FOOTER_THEMES.chalk} />
     </>
+  );
+}
+
+function ScriptBody({ blocks, accent }: { blocks: ScriptBlock[]; accent: string }) {
+  return (
+    <div className="mt-2">
+      {blocks.map((block, i) => {
+        if (block.kind === "heading") {
+          return (
+            <h3 key={i} className="font-display text-2xl text-[#221E1B] mt-12 mb-4" style={{ color: accent }}>
+              {block.text}
+            </h3>
+          );
+        }
+        if (block.kind === "cutpoint") {
+          return (
+            <div key={i} className="my-10 flex items-center gap-3">
+              <span className="flex-1 border-t border-dashed border-[#221E1B]/30" aria-hidden />
+              <span className="sticker px-3 py-1 text-[10px] font-mono uppercase tracking-wider whitespace-nowrap" style={{ background: "#fff8e8" }}>
+                Cut point · {block.label}
+              </span>
+              <span className="flex-1 border-t border-dashed border-[#221E1B]/30" aria-hidden />
+            </div>
+          );
+        }
+        return (
+          <p key={i} className="text-lg text-[#221E1B] leading-relaxed mb-5">
+            {block.text}
+          </p>
+        );
+      })}
+    </div>
   );
 }
 

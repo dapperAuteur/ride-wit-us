@@ -18,7 +18,7 @@ The pockets are not random. Each one has a job.
 
 The chest pocket holds small allen keys. The four, five, and six millimeter sizes. They're light. They're flat. They don't pull the apron sideways.
 
-The right hip pocket holds the 15mm wrench and a flathead screwdriver. The 15mm wrench is for pedals and for axle nuts. Pedals come off counterclockwise. Axle nuts on a cruiser come off clockwise. You'll reach for that wrench thirty times in a Saturday shift.
+The right hip pocket holds the 15mm wrench and a flathead screwdriver. The 15mm wrench is for pedals and for axle nuts. Pedals come off turning the wrench towards to back. You'll reach for that wrench thirty times in a Saturday shift.
 
 The left hip pocket holds a pen and a sharpie. The apprentice who can't write down what's wrong with the bike is the apprentice who fixes the wrong thing.
 
@@ -26,7 +26,7 @@ The big front pocket holds rags. At least two. Different colors for different jo
 
 This isn't fussiness. There's a reason for every pocket.
 
-A tool you can't find is a tool you'll drop. A tool dropped on a derailleur can cost forty dollars to replace. A tool dropped on your foot can cost you the rest of your shift.
+A tool you can't find is a tool you'll drop. A tool dropped on a derailleur can cost money to replace. A tool dropped on your foot can cost you the rest of your shift.
 
 Somebody figured the pocket layout out a long time ago. They dropped a wrench. They dropped another one. They figured out the heavy tools belong in the hip pocket and the light ones in the chest. They figured out the pen goes nowhere near the rags. A pen leaks through a rag. A leaked rag ruins the next chain you wipe. So pen and rag stay apart.
 
@@ -116,11 +116,11 @@ Number three. The pedal wrench.
 
 It looks like a 15mm wrench with the head bent at an angle. The angle matters because pedal flats are tight against the crank arm. A regular 15mm doesn't fit in there. The bent head reaches in.
 
-The long handle matters more. Some pedals come off easy. Some, especially old cruiser pedals that have been on the bike for thirty years, come off only with a long handle and your full body weight.
+The long handle matters more. Some pedals come off easy. Some, especially old cruiser pedals that have been on the bike for thirty years, come off only with a long handle. A long handle allows you to get more leverage and apply more force.
 
-Drive-side pedal turns counterclockwise to remove. Non-drive side turns clockwise.
+Pedals turn toward the back to remove. Always toward the back of the bikes.
 
-Yes, those are reversed from what you'd expect. Pedal threading. We'll cover the why in Season Two when we talk about bottom brackets. For now, drive-side counterclockwise, non-drive clockwise. Memorize it.
+Pedal threading. We'll cover the why in Season Two when we talk about bottom brackets. For now, pedals turn toward the back to remove.
 
 Number four. Tire levers. Plastic. Three of them.
 
@@ -134,7 +134,7 @@ Number five. Floor pump. With a real gauge.
 
 Not a hand pump. Not a frame pump. A floor pump with a base you can stand on and a pressure gauge you can actually read.
 
-Tire pressure is printed on the side of every tire. Cruiser tire is usually 50 PSI. Hybrid tire is 65 to 80. Road tire is 90 to 110. The gauge on the floor pump tells you when you've hit the target.
+Tire pressure is printed on the side of every tire. The gauge on the floor pump tells you when you've hit the target.
 
 Park Tool, Lezyne, Topeak. All of them make floor pumps that last five years or more. Don't go cheap on the gauge.
 

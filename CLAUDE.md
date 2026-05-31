@@ -68,3 +68,9 @@ Full rule with rationale: `/Users/bam/Code_NOiCloud/ai-builds/gemini/witus/CLAUD
 **Footer:** canonical recipe from [`./public/brand/footer-recipe.md`](./public/brand/footer-recipe.md). Rise Wellness disclaimer is **byte-identical** ecosystem-wide; the only swap targets are accent + surface tokens.
 
 @AGENTS.md
+
+---
+
+## Plans convention
+
+All implementation plans live in `./plans/` as markdown named `NN-description-of-plan.md` — two-digit numeric prefix, kebab-case slug, next available number, don't skip. Sub-queues: `./plans/user-tasks/NN-slug.md` (operator tasks), `./plans/bugs/`, `./plans/future/`. (`plans/` is typically gitignored — local working notes.) Full rule: `gemini/witus/CLAUDE.md` §"Plans convention".

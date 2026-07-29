@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs'
+
 let userConfig = undefined
 try {
   // try to import ESM first
@@ -48,4 +50,14 @@ if (userConfig) {
   }
 }
 
-export default nextConfig
+// Wrap with Sentry's build plugin so client bundles get source maps and the SDK is bundled for every
+// runtime. Safe with no Sentry env set: without an auth token it simply skips source-map upload (you
+// get minified stack traces), and the runtime SDK stays inert without a DSN. org/project/authToken
+// all come from env so no account identifier or secret is committed here.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+})

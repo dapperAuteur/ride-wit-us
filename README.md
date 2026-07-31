@@ -22,6 +22,10 @@ No database required. No login. The canonical episode list is a single TypeScrip
 
 For real form submissions to send confirmation/alert email, set `MAILGUN_API_KEY` in `.env.local`. Without it, [`lib/mailgun.ts`](./lib/mailgun.ts) logs would-be sends to stdout. Other env vars documented in [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables).
 
+`npm test` runs the Vitest suite (today: the error-report scrubber).
+
+Error monitoring goes to Better Stack over the Sentry protocol and is **off unless a DSN is set**. See [ARCHITECTURE.md § Error monitoring](./ARCHITECTURE.md#error-monitoring). Every event passes through [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts), which drops form bodies, contact details, location data, and credentials before anything is transmitted.
+
 ---
 
 ## What's in here

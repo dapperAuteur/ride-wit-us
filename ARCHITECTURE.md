@@ -12,6 +12,8 @@
 | Auth | **None** | Public site; CTAs into Academy / FlashLearn use those apps' own auth |
 | Email | **Mailgun** on `mg.witus.online` | Ecosystem domain |
 | Analytics | **Vercel Analytics** | Drop-in, no PII |
+| Error monitoring | **Better Stack** via `@sentry/nextjs` | Sentry-protocol ingest; inert without a DSN, and every event is scrubbed by `lib/sentry-scrub.ts` |
+| Tests | **Vitest** | Ecosystem default; `npm test` |
 
 ## What this app owns vs. what it links to
 
@@ -136,8 +138,24 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `OUTBOX_SOURCE_SLUG` | Production | — | Source identity for generic Outbox posts |
 | `OUTBOX_PODCAST_RWU_SECRET` | Production | — | Separate secret for podcast publish channel (so it can be rotated independently) |
 | `OUTBOX_PODCAST_RWU_SLUG` | Production | — | Source identity for podcast Outbox posts |
+| `SENTRY_DSN` | No | — | Better Stack ingest DSN for server + edge errors. Unset ⇒ the SDK never initializes |
+| `NEXT_PUBLIC_SENTRY_DSN` | No | — | Same source, browser side. Inlined at build time |
+| `SENTRY_ENVIRONMENT` | No | `VERCEL_ENV` → `NODE_ENV` | Label on every event |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | No | `NODE_ENV` | Browser-side equivalent |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | No | — | Build-time source-map upload only. Absent ⇒ upload is skipped and stack traces stay minified |
 
 Per ecosystem convention, provision via `vercel env add` rather than committing `.env*` files. `.env*` is in `.gitignore`.
+
+---
+
+## Error monitoring
+
+Errors are reported to **Better Stack**, which ingests over the Sentry protocol, so the client is the standard `@sentry/nextjs` SDK pointed at a Better Stack DSN. Nothing about the wiring is vendor-specific: swapping the DSN swaps the destination.
+
+- **Inert by default.** [`sentry.server.config.ts`](./sentry.server.config.ts), [`sentry.edge.config.ts`](./sentry.edge.config.ts), and [`instrumentation-client.ts`](./instrumentation-client.ts) each guard `Sentry.init()` behind a DSN check. With no DSN set, no SDK is initialized and no request leaves the process, so local dev and previews are unaffected until BAM provisions the source.
+- **Errors only.** `tracesSampleRate: 0`, both replay rates `0`, `sendDefaultPii: false`. Session replay in particular is off on purpose: it would record the `/tune-in` form as it is typed.
+- **Everything is scrubbed before transmission.** [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts) is the `beforeSend` hook on every runtime. It deletes the request body outright (the three `/api/inbox-ingest` form types are all contact details plus a neighborhood), drops cookies and credential headers including `X-Witus-Signature`, strips user identity, and redacts emails, JWTs, HMACs, labelled secrets, token-bearing URLs, street addresses, and lat/lng pairs from messages, exception values, extra, tags, and breadcrumbs. It is covered by [`lib/sentry-scrub.test.ts`](./lib/sentry-scrub.test.ts) (`npm test`).
+- **No Content-Security-Policy** ships from this app today, so no `connect-src` allowance is needed. If one is added later it must include the DSN origin or browser-side reports will fail silently.
 
 ---
 

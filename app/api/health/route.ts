@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { EPISODES } from "@/lib/curriculum/episodes";
 
-// /api/health — public, unauthenticated liveness probe for uptime monitors.
+// /api/health: public, unauthenticated liveness probe for uptime monitors.
 //
 // WHAT THIS PROVES
 //   The deployment booted, a route handler executes, and the curriculum source

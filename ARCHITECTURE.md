@@ -96,7 +96,9 @@ When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true
 /episodes                       catalog (anchors: #season-1..4)
 /episodes/[slug]                32 prerendered episode pages
 /seasons/[n]                    4 prerendered season pages
+/api/health                     GET + HEAD uptime probe (dynamic, no-store)
 /api/inbox-ingest               POST endpoint (dynamic)
+/api/outbox/publish             POST endpoint (dynamic)
 /manifest.webmanifest           PWA manifest
 
 # Archive — not linked from main nav, robots:noindex,nofollow
@@ -159,9 +161,30 @@ Errors are reported to **Better Stack**, which ingests over the Sentry protocol,
 
 ---
 
+## Uptime monitoring
+
+`/api/health` ([`app/api/health/route.ts`](./app/api/health/route.ts)) is the target for external uptime
+monitors. It is a **liveness probe**, not a delivery check.
+
+- **Why not `/`.** Every public page is statically prerendered, so `/` can answer `200` from the CDN
+  while the deployment behind it is broken. `/api/health` is `force-dynamic` with `revalidate = 0` and
+  `Cache-Control: no-store`, so a `200` means a route handler really ran on this deploy.
+- **What it checks.** That the handler executed and that `EPISODES` loaded non-empty. With no database
+  and no auth, the bundled curriculum module is this app's only hard runtime dependency.
+- **What it deliberately does not check.** Mailgun, the WitUS Inbox, and the Outbox are never called
+  from the probe. Their configuration is reported as three presence booleans (`!!` of the env var,
+  never the value). Calling them would let a third-party outage turn this site's monitor red while the
+  site served normally, and would put an outbound request on every monitor tick.
+- **Failure shape.** `503 { ok: false, error: "<fixed token>" }`. The `catch` takes no binding and logs
+  a constant string, so an exception message can never reach the response or an error report.
+- Covered by [`app/api/health/route.test.ts`](./app/api/health/route.test.ts), which asserts that a set
+  env value cannot appear in the serialized body.
+
+---
+
 ## Build + deploy
 
-- `npm run build` produces a static-first build with one dynamic route (`/api/inbox-ingest`).
+- `npm run build` produces a static-first build with three dynamic routes (`/api/health`, `/api/inbox-ingest`, `/api/outbox/publish`).
 - All 38+ public pages are statically prerendered via `generateStaticParams()`.
 - Deploy via Vercel (the ecosystem default). The branch policy in [CONTRIBUTING.md](./CONTRIBUTING.md) requires BAM to merge to `main` via the GitHub UI; Vercel auto-deploys main → production and branches → preview.
 

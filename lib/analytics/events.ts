@@ -19,7 +19,7 @@
  */
 
 /** This app's slug in the shared project. Every event carries it. */
-export const ANALYTICS_APP = "ride-witus";
+export const ANALYTICS_APP = "ride";
 
 /**
  * Events with identical names across every ecosystem app. Names are contractual.

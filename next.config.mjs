@@ -15,6 +15,35 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // PostHog's endpoints use trailing slashes (/e/, /flags/, /s/). Without this, Next
+  // issues a 308 to the slashless form before the rewrite runs and ingest breaks.
+  // Required by PostHog's documented Next.js proxy setup.
+  //
+  // SIDE EFFECT worth knowing: this disables Next's automatic trailing-slash redirect
+  // for EVERY route, not just /ingest — /about/ and /about both become reachable. The
+  // root layout's relative `alternates.canonical` is what keeps search engines pointed
+  // at one form. See gemini/witus/plans/26-posthog-ecosystem-rollout.md.
+  skipTrailingSlashRedirect: true,
+
+  async rewrites() {
+    // Reverse-proxy PostHog through our own origin. us.i.posthog.com is on uBlock
+    // Origin, Brave Shields, and Safari's tracker list, so a meaningful share of
+    // events never leave the browser — including, reliably, our own test visits.
+    //
+    // Assets come from a different upstream host than ingest, hence two rules. The
+    // more specific /static rule must come first.
+    return [
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+    ]
+  },
+
   eslint: {
     ignoreDuringBuilds: true,
   },

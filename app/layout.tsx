@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import { PostHogProvider } from "@/lib/analytics/posthog-provider";
 import { SITE_URL, APP_NAME, APP_DESCRIPTION } from "@/lib/site-meta";
 
 export const viewport: Viewport = {
@@ -10,6 +11,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  // Relative canonical: resolves per-route against metadataBase, so every page names
+  // its slashless form as canonical. Needed because skipTrailingSlashRedirect (the
+  // PostHog /ingest proxy prerequisite in next.config.mjs) makes /about/ and /about
+  // both reachable — without this they'd be duplicate URLs to search engines.
+  alternates: { canonical: "./" },
   applicationName: APP_NAME,
   appleWebApp: {
     capable: true,
@@ -61,6 +67,13 @@ export default function RootLayout({
           {children}
         </main>
         <Analytics />
+        {/* Ecosystem PostHog (plans/26 in gemini/witus): anonymous, memory-only,
+            proxied via /ingest. Key read here in the Server Component and passed
+            down; `?? null` keeps keyless deploys in the supported inert state. */}
+        <PostHogProvider
+          apiKey={process.env.NEXT_PUBLIC_POSTHOG_KEY ?? null}
+          apiHost="/ingest"
+        />
       </body>
     </html>
   );

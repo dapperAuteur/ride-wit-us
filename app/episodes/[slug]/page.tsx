@@ -61,7 +61,7 @@ export default async function EpisodePage({ params }: PageProps) {
           <ul className="grid sm:grid-cols-2 gap-4">
             <CTA color={STICKER_COLORS[0]} title="Take the class" body="CentOS Academy lesson with quizzes." href={e.academyLessonId ? `https://centenarianos.com/academy/lessons/${e.academyLessonId}` : "https://centenarianos.com/academy"} placeholder={!e.academyLessonId} />
             <CTA color={STICKER_COLORS[2]} title="Drill the vocab" body="One spaced-rep deck on FlashLearnAI." href={e.flashlearnSetId ? `https://flashlearnai.witus.online/sets/${e.flashlearnSetId}` : "https://flashlearnai.witus.online"} placeholder={!e.flashlearnSetId} />
-            <CTA color={STICKER_COLORS[3]} title="Ride the route" body="360° ride on Wanderlearn." href={e.wanderlearnTourId ? `https://wanderlearn.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlearn.witus.online"} placeholder={!e.wanderlearnTourId} />
+            <CTA color={STICKER_COLORS[3]} title="Ride the route" body="360° ride on Wanderlust." href={e.wanderlearnTourId ? `https://wanderlust.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlust.witus.online"} placeholder={!e.wanderlearnTourId} />
             <CTA color={STICKER_COLORS[1]} title="Get notified" body="Subscribe to alerts for episodes you care about." href="/tune-in" />
           </ul>
 

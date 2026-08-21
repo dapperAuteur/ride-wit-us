@@ -59,10 +59,10 @@ const SIBLING_PRODUCTS: SiblingProduct[] = [
   { name: "CentenarianOS", href: "https://centenarianos.com" },
   { name: "Work.WitUS", href: "https://work.witus.online" },
   { name: "Tour Manager OS", href: "https://tour.witus.online" },
-  { name: "Wanderlearn", href: "https://wanderlearn.witus.online" },
+  { name: "Wanderlust", href: "https://wanderlust.witus.online" },
   { name: "Fly.WitUS", href: "https://fly.witus.online" },
   { name: "FlashLearnAI", href: "https://flashlearnai.witus.online" },
-  { name: "Learn.WitUS", href: "https://centenarianos.com/academy" },
+  { name: "Learn.WitUS", href: "https://learn.witus.online" },
   { name: "AwesomeWebStore", href: "https://awesomewebstore.com" },
 ];
 
@@ -227,7 +227,7 @@ For each app: existing palette · suggested logo variant · the swap pattern · 
 - **Status:** **Reference implementation.** [`claude/fly-witus/src/components/site-footer.tsx`](../../../fly-witus/src/components/site-footer.tsx). Currently uses `flywitus-platypus-logo.png` instead of a WitUS variant — keep the platypus.
 - **Action:** optional small `04-orbit-type` wordmark at the very bottom — "Part of the WitUS ecosystem · [logo]" — to tie back to the umbrella brand. Otherwise this footer is canonical and doesn't need to change.
 
-### Wanderlearn — `wanderlearn.witus.online`
+### Wanderlust — `wanderlust.witus.online`
 
 - **Palette:** check repo (earthy / travel-themed).
 - **Logo variant:** `01-orbit` (8 product accents echo place-based course library) or `02-duality`.

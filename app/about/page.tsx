@@ -32,7 +32,7 @@ export default function AboutPage() {
           <div className="max-w-3xl mx-auto px-6 py-16">
             <h2 className="font-display text-4xl text-[#221E1B] mb-4">The show.</h2>
             <p className="text-lg text-[#221E1B] leading-relaxed">
-              Audio-first. 35 to 40 minutes per episode. Modular cut-points so an instructor can pull a single skill clip and play it in class. Modeled on the BetterViceClub format developed at <a href="https://centenarianos.com/academy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-[#D33E2D] decoration-2 hover:text-[#D33E2D]">CentenarianOS Academy</a>. Every episode has a companion class, a flashcard deck, and (where the route applies) a 360° ride tour in <a href="https://wanderlearn.witus.online" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-[#D33E2D] decoration-2 hover:text-[#D33E2D]">Wanderlearn</a>.
+              Audio-first. 35 to 40 minutes per episode. Modular cut-points so an instructor can pull a single skill clip and play it in class. Modeled on the BetterViceClub format developed at <a href="https://centenarianos.com/academy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-[#D33E2D] decoration-2 hover:text-[#D33E2D]">CentenarianOS Academy</a>. Every episode has a companion class, a flashcard deck, and (where the route applies) a 360° ride tour in <a href="https://wanderlust.witus.online" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 decoration-[#D33E2D] decoration-2 hover:text-[#D33E2D]">Wanderlust</a>.
             </p>
           </div>
         </section>

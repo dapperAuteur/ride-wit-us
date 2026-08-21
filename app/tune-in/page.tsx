@@ -35,7 +35,7 @@ const ECOSYSTEM_LINKS: EcosystemLink[] = [
   {
     label: "Ride the route",
     body: "360° virtual tours of the routes in Wanderlearn.",
-    href: "https://wanderlearn.witus.online",
+    href: "https://wanderlust.witus.online",
     color: "#5C8AA5",
     rotate: "-1deg",
     external: true,

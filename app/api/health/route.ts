@@ -66,6 +66,15 @@ export async function GET() {
           mailgun: isConfigured("MAILGUN_API_KEY"),
           inbox: isConfigured("INBOX_INGEST_URL", "INBOX_INGEST_SECRET", "INBOX_SOURCE_SLUG"),
           outbox: isConfigured("OUTBOX_INGEST_URL", "OUTBOX_INGEST_SECRET", "OUTBOX_SOURCE_SLUG"),
+          // WitUS SSO is all-or-nothing: without any one of these the sign-in button is an
+          // affordance nobody can complete, so /signin renders no button at all. This boolean is
+          // how BAM confirms the three vars actually landed on a deploy without reading their
+          // values back — see lib/witus-sso-config.ts and plans/user-tasks/05-*.
+          witus_sso: isConfigured(
+            "WITUS_OIDC_CLIENT_ID",
+            "WITUS_OIDC_CLIENT_SECRET",
+            "WITUS_SESSION_SECRET"
+          ),
         },
         time: new Date().toISOString(),
       },

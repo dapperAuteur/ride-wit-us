@@ -12,6 +12,9 @@ const SECRET_VARS = [
   "OUTBOX_INGEST_URL",
   "OUTBOX_INGEST_SECRET",
   "OUTBOX_SOURCE_SLUG",
+  "WITUS_OIDC_CLIENT_ID",
+  "WITUS_OIDC_CLIENT_SECRET",
+  "WITUS_SESSION_SECRET",
 ] as const;
 
 const saved = new Map<string, string | undefined>();
@@ -48,7 +51,7 @@ describe("GET /api/health", () => {
     for (const name of SECRET_VARS) setEnv(name, "unit-test-value-do-not-leak");
     const res = await GET();
     const body = await res.json();
-    expect(body.config).toEqual({ mailgun: true, inbox: true, outbox: true });
+    expect(body.config).toEqual({ mailgun: true, inbox: true, outbox: true, witus_sso: true });
   });
 
   it("leaks no environment value in the serialized response", async () => {
@@ -63,7 +66,7 @@ describe("GET /api/health", () => {
     const res = await GET();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.config).toEqual({ mailgun: false, inbox: false, outbox: false });
+    expect(body.config).toEqual({ mailgun: false, inbox: false, outbox: false, witus_sso: false });
   });
 
   it("treats an empty-string credential as unconfigured", async () => {

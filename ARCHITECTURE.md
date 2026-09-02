@@ -8,8 +8,8 @@
 | Language | **TypeScript** | Strict mode; no codegen |
 | Styling | **Tailwind CSS 3** + CSS variables for theme tokens | Per `public/brand/footer-recipe.md` |
 | Hosting | **Vercel** (Fluid Compute) | Ecosystem default — see `vercel:bootstrap` skill |
-| Database | **None** | All persistent state owned by sibling apps |
-| Auth | **None** | Public site; CTAs into Academy / FlashLearn use those apps' own auth |
+| Database | **None** | All persistent state owned by sibling apps — including for signed-in people |
+| Auth | **WitUS SSO only** | OIDC code flow against `accounts.witus.online`; session is a signed cookie, no user table. Dark until provisioned — see § Authentication |
 | Email | **Mailgun** on `mg.witus.online` | Ecosystem domain |
 | Analytics | **Vercel Analytics** | Drop-in, no PII |
 | Error monitoring | **Better Stack** via `@sentry/nextjs` | Sentry-protocol ingest; inert without a DSN, and every event is scrubbed by `lib/sentry-scrub.ts` |
@@ -101,6 +101,13 @@ When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true
 /api/outbox/publish             POST endpoint (dynamic)
 /manifest.webmanifest           PWA manifest
 
+# Authentication — see § Authentication. All dynamic, all noindex.
+/signin                         the only door in ("Sign in with WitUS" / "Continue as <name>")
+/signed-in                      protected; proves the loop end to end. NOT a profile page.
+/api/auth/witus/authorize       GET  starts the OIDC code flow (state + PKCE)
+/api/auth/witus/callback        GET  finishes it and mints the session cookie
+/api/auth/signout               POST destroys the local session (303 to /, or 200 JSON)
+
 # Archive — not linked from main nav, robots:noindex,nofollow
 /styleguide                     index of two non-chosen design directions
 /styleguide/workshop-apron      frozen prototype
@@ -140,6 +147,11 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `OUTBOX_SOURCE_SLUG` | Production | — | Source identity for generic Outbox posts |
 | `OUTBOX_PODCAST_RWU_SECRET` | Production | — | Separate secret for podcast publish channel (so it can be rotated independently) |
 | `OUTBOX_PODCAST_RWU_SLUG` | Production | — | Source identity for podcast Outbox posts |
+| `WITUS_OIDC_CLIENT_ID` | For sign-in | — | `witus-ride`, fixed by the IdP registry. All three of these must be set together or sign-in stays dark |
+| `WITUS_OIDC_CLIENT_SECRET` | For sign-in | — | Issued on the IdP as `WITUS_OIDC_SECRET__RIDE` |
+| `WITUS_SESSION_SECRET` | For sign-in | — | HMAC key for this app's session cookie. Not shared with any other app; rotating it signs everyone out |
+| `WITUS_OIDC_ISSUER` | No | `https://accounts.witus.online/api/idp` | One value; all four OIDC endpoints and the session-probe origin derive from it |
+| `NEXT_PUBLIC_SITE_URL` | No | request host | Canonical origin for the `redirect_uri` and `post_logout_redirect_uri`. Both derive from the same value so they cannot disagree |
 | `SENTRY_DSN` | No | — | Better Stack ingest DSN for server + edge errors. Unset ⇒ the SDK never initializes |
 | `NEXT_PUBLIC_SENTRY_DSN` | No | — | Same source, browser side. Inlined at build time |
 | `SENTRY_ENVIRONMENT` | No | `VERCEL_ENV` → `NODE_ENV` | Label on every event |

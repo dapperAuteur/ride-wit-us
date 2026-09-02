@@ -9,7 +9,7 @@
 | Styling | **Tailwind CSS 3** + CSS variables for theme tokens | Per `public/brand/footer-recipe.md` |
 | Hosting | **Vercel** (Fluid Compute) | Ecosystem default — see `vercel:bootstrap` skill |
 | Database | **None** | All persistent state owned by sibling apps — including for signed-in people |
-| Auth | **WitUS SSO only** | OIDC code flow against `accounts.witus.online`; session is a signed cookie, no user table. Dark until provisioned — see § Authentication |
+| Auth | **WitUS SSO only** | OIDC code flow against `accounts.witus.online`; session is a signed cookie, no user table. Admin is one address via `ADMIN_EMAIL`, failing closed. Dark until provisioned — see § Authentication |
 | Email | **Mailgun** on `mg.witus.online` | Ecosystem domain |
 | Analytics | **Vercel Analytics** | Drop-in, no PII |
 | Error monitoring | **Better Stack** via `@sentry/nextjs` | Sentry-protocol ingest; inert without a DSN, and every event is scrubbed by `lib/sentry-scrub.ts` |
@@ -215,9 +215,25 @@ mean a JWKS fetch, a cache, and a key-rotation failure mode, to learn exactly wh
 authenticated back-channel request returns. The IdP's tokens are used once in the callback and
 discarded.
 
-**There is no allow-list.** Anyone with a WitUS account can sign in. That is intended for a public
-curriculum site: a session grants access to `/signed-in` and nothing else today. When the travel
-module lands and there is something worth authorizing, that gate belongs on the resource.
+**There is no allow-list on sign-in.** Anyone with a WitUS account can sign in. That is intended
+for a public curriculum site: a session grants access to `/signed-in` and nothing else today. When
+the travel module lands and there is something worth authorizing, that gate belongs on the resource.
+
+**Admin is separate, and is one address.** [`lib/auth/admin.ts`](./lib/auth/admin.ts) compares the
+signed-in session's email to `ADMIN_EMAIL`, case-insensitively, and offers `isCurrentUserAdmin()`,
+`requireAdmin()` (pages) and `requireApiAdmin()` (route handlers — 401 unauthenticated, 403 signed
+in but not the admin). Same mechanism as every other admin-gated app in the ecosystem
+(witus.online's `lib/admin-auth.ts`, VoGoat, Centenarian Coach, WitUS Inbox).
+
+Two properties worth keeping. It **fails closed**: unset or blank `ADMIN_EMAIL` means nobody is an
+admin, not everybody. And admin is **not** read from an IdP claim — the IdP does not know who
+administers this app, so trusting a claim would hand out admin here the day the IdP grew a `role`
+claim for some unrelated purpose. Still no user table: admin is a property of one configured
+address, not a stored row.
+
+`requireAdmin()` sends a signed-in non-admin to `/`, not to `/signin`: they are not short of a
+session, they are short of permission, and returning them to a form they already completed reads as
+a broken loop.
 
 ### Configuration is all-or-nothing, and dark by default
 

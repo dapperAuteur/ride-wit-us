@@ -18,11 +18,13 @@ npm install
 npm run dev          # → http://localhost:3000
 ```
 
-No database required. No login. The canonical episode list is a single TypeScript source of truth at [`lib/curriculum/episodes.ts`](./lib/curriculum/episodes.ts).
+No database required. The canonical episode list is a single TypeScript source of truth at [`lib/curriculum/episodes.ts`](./lib/curriculum/episodes.ts).
+
+There *is* a login — **"Sign in with WitUS", and only that**. No password, no magic link, no user table, still no database: the session is one signed cookie holding the identity the WitUS IdP returned. It stays completely dark (no button, no request to accounts.witus.online) unless `WITUS_OIDC_CLIENT_ID`, `WITUS_OIDC_CLIENT_SECRET`, and `WITUS_SESSION_SECRET` are all set, so local dev and unprovisioned deploys behave exactly as they did before. Nothing on the public site requires an account — it is here for the CentenarianOS travel module that is moving into this app. See [ARCHITECTURE.md § Authentication](./ARCHITECTURE.md#authentication).
 
 For real form submissions to send confirmation/alert email, set `MAILGUN_API_KEY` in `.env.local`. Without it, [`lib/mailgun.ts`](./lib/mailgun.ts) logs would-be sends to stdout. Other env vars documented in [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables).
 
-`npm test` runs the Vitest suite (today: the error-report scrubber and the health endpoint).
+`npm test` runs the Vitest suite (today: the error-report scrubber, the health endpoint, the SSO helpers, and the session token).
 
 Error monitoring goes to Better Stack over the Sentry protocol and is **off unless a DSN is set**. See [ARCHITECTURE.md § Error monitoring](./ARCHITECTURE.md#error-monitoring). Every event passes through [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts), which drops form bodies, contact details, location data, and credentials before anything is transmitted.
 
@@ -37,11 +39,18 @@ app/
   tune-in/              notify-me form + ecosystem sibling links + host listen-party form
   episodes/             catalog + episode detail (32 episodes, statically generated)
   seasons/[n]/          season pages (4)
+  signin/               the only door in — "Sign in with WitUS" / "Continue as <name>"
+  signed-in/            protected page proving the auth loop end to end (not a profile page)
+  api/auth/witus/       OIDC authorize + callback (state + PKCE, claims from userinfo)
+  api/auth/signout/     POST that destroys the local session
   api/health/           GET + HEAD liveness probe for uptime monitors
   api/inbox-ingest/     POST endpoint that sends Mailgun email per form_type
   styleguide/           archive of the two non-chosen design directions (not in main nav)
-components/             site header/footer, design switcher, NotifyMeForm
+components/             site header/footer, design switcher, NotifyMeForm, sign-in/out buttons
 lib/
+  auth/                 session token (HS256 over node:crypto) + the cookie data-access layer
+  witus-sso.ts          SSO helpers: probe, loop guard, derived IdP URLs (pure, tested)
+  witus-sso-config.ts   the half of the above that reads env and request headers
   curriculum/           episodes + seasons + apron palette (single source of truth)
   community-events.ts   shared "Next ride / Open shop" data
   mailgun.ts            Mailgun HTTP-API client (mg.witus.online)

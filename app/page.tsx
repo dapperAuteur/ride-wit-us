@@ -120,7 +120,7 @@ export default function HomePage() {
             <ul className="flex flex-wrap gap-3">
               {[
                 { label: "CentOS Academy · classes", color: "#F4B44A", href: "https://centenarianos.com/academy" },
-                { label: "Wanderlearn · routes", color: "#5C8AA5", href: "https://wanderlearn.witus.online" },
+                { label: "Wanderlust · routes", color: "#5C8AA5", href: "https://wanderlust.witus.online" },
                 { label: "FlashLearnAI · vocab", color: "#D33E2D", href: "https://flashlearnai.witus.online" },
                 { label: "WitUS Inbox · forms", color: "#3E7C3A", href: "https://inbox.witus.online" },
                 { label: "WitUS Outbox · posts", color: "#F4B44A", href: "https://witus.online" },

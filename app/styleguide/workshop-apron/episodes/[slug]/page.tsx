@@ -58,7 +58,7 @@ export default async function WorkshopApronEpisode({ params }: PageProps) {
           <ul className="grid sm:grid-cols-2 gap-3">
             <CTA title="Take the class" body="CentOS Academy lesson with quizzes." href={e.academyLessonId ? `https://centenarianos.com/academy/lessons/${e.academyLessonId}` : "https://centenarianos.com/academy"} placeholder={!e.academyLessonId} />
             <CTA title="Drill the vocab" body="One spaced-rep set on FlashLearnAI." href={e.flashlearnSetId ? `https://flashlearnai.witus.online/sets/${e.flashlearnSetId}` : "https://flashlearnai.witus.online"} placeholder={!e.flashlearnSetId} />
-            <CTA title="Ride the route" body="360° tour on Wanderlearn." href={e.wanderlearnTourId ? `https://wanderlearn.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlearn.witus.online"} placeholder={!e.wanderlearnTourId} />
+            <CTA title="Ride the route" body="360° tour on Wanderlust." href={e.wanderlearnTourId ? `https://wanderlust.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlust.witus.online"} placeholder={!e.wanderlearnTourId} />
             <CTA title="Listen elsewhere" body="Apple · Spotify · Overcast (pending)." href="#" placeholder />
           </ul>
 

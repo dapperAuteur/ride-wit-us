@@ -59,7 +59,7 @@ export default async function FolderAndFrameEpisode({ params }: PageProps) {
           <ul className="grid sm:grid-cols-2 gap-px bg-[#0f0f10]">
             <CTA index="01" title="Take the class" body="CentOS Academy lesson." href={e.academyLessonId ? `https://centenarianos.com/academy/lessons/${e.academyLessonId}` : "https://centenarianos.com/academy"} placeholder={!e.academyLessonId} />
             <CTA index="02" title="Drill the vocab" body="FlashLearnAI deck." href={e.flashlearnSetId ? `https://flashlearnai.witus.online/sets/${e.flashlearnSetId}` : "https://flashlearnai.witus.online"} placeholder={!e.flashlearnSetId} />
-            <CTA index="03" title="Ride the route" body="Wanderlearn 360° tour." href={e.wanderlearnTourId ? `https://wanderlearn.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlearn.witus.online"} placeholder={!e.wanderlearnTourId} />
+            <CTA index="03" title="Ride the route" body="Wanderlust 360° tour." href={e.wanderlearnTourId ? `https://wanderlust.witus.online/tours/${e.wanderlearnTourId}` : "https://wanderlust.witus.online"} placeholder={!e.wanderlearnTourId} />
             <CTA index="04" title="Listen elsewhere" body="Apple · Spotify · Overcast." href="#" placeholder />
           </ul>
 

@@ -131,7 +131,8 @@ for trips, rides, vehicles, fuel, maintenance, components, and cost per mile, ta
 travel module (decomposition Stage 4). RideWitUS pushes signed summaries (trip activity, planned-trip
 budgets, dated maintenance and fuel forecasts, per-vehicle cost and depreciation, costs to match with
 transactions) to CentenarianOS, which keeps local copies for its correlations, weekly review, budgets, and
-expense forecast. Full requirements, the event contract, and the migration plan: [PRD.md](./PRD.md).
+expense forecast. Full requirements, the event contract, and the migration plan are in the PRD, which now
+lives in the local-only planning folder at `plans/future/PRD.md` (gitignored, so it is not on GitHub).
 
 ---
 
@@ -149,7 +150,7 @@ expense forecast. Full requirements, the event contract, and the migration plan:
 
 ## Documentation
 
-- [PRD.md](./PRD.md) — product requirements for the mobility module and the CentenarianOS integration (draft)
+- `plans/future/PRD.md` (local-only, gitignored): product requirements for the mobility module and the CentenarianOS integration
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — tech stack, data flow, routing map, env vars
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — branch hygiene, commit style, dev workflow
 - [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — community expectations

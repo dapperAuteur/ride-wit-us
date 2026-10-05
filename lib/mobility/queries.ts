@@ -87,6 +87,20 @@ export async function getStay(userId: string, id: string): Promise<StayRow | nul
   return row ?? null;
 }
 
+/**
+ * Vehicles and places for the trip form's pickers. Retired vehicles are left out, except the one
+ * the trip being edited already uses.
+ */
+export async function tripFormChoices(userId: string, keepVehicleId: string | null = null) {
+  const [vs, ps] = await Promise.all([listVehicles(userId), listPlaces(userId)]);
+  return {
+    vehicles: vs
+      .filter((v) => v.isActive || v.id === keepVehicleId)
+      .map((v) => ({ id: v.id, nickname: v.isActive ? v.nickname : `${v.nickname} (retired)`, defaultTripMode: v.defaultTripMode })),
+    places: ps.map((p) => ({ id: p.id, label: p.label })),
+  };
+}
+
 export type TripFilter = "all" | "planned" | "done";
 
 export const TRIP_FILTERS: readonly TripFilter[] = ["all", "planned", "done"];

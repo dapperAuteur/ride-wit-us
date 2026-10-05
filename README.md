@@ -22,9 +22,9 @@ No database required for the podcast site. The mobility app under `/app` needs a
 
 There *is* a login — **"Sign in with WitUS", and only that**. No password, no magic link, no user table, still no database: the session is one signed cookie holding the identity the WitUS IdP returned. It stays completely dark (no button, no request to accounts.witus.online) unless `WITUS_OIDC_CLIENT_ID`, `WITUS_OIDC_CLIENT_SECRET`, and `WITUS_SESSION_SECRET` are all set, so local dev and unprovisioned deploys behave exactly as they did before. Nothing on the public site requires an account. Signing in leads to the mobility app at `/app`, which is open to the owner (`ADMIN_EMAIL`) during the private trial; everyone else sees a waitlist link. The public waitlist is at `/waitlist`. See [ARCHITECTURE.md § Authentication](./ARCHITECTURE.md#authentication).
 
-For real form submissions to send confirmation/alert email, set `MAILGUN_API_KEY` in `.env.local`. Without it, [`lib/mailgun.ts`](./lib/mailgun.ts) logs would-be sends to stdout. Other env vars documented in [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables).
+For real form submissions to send confirmation/alert email, set `MAILGUN_API_KEY` in `.env.local`. Without it, [`lib/mailgun.ts`](./lib/mailgun.ts) logs would-be sends to stdout (and the waitlist confirmation email is skipped). Forms and waitlist signups are also forwarded to the WitUS Inbox, and `/api/outbox/publish` drafts social posts in the WitUS Outbox; both stay stubbed until their env is set. See [ARCHITECTURE.md § WitUS Inbox and Outbox](./ARCHITECTURE.md#witus-inbox-and-outbox). Other env vars documented in [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables).
 
-`pnpm test` runs the Vitest suite (the error-report scrubber, the health endpoint, the SSO helpers, the session token, the units library, the schema, mobility access and settings, and the waitlist). `pnpm typecheck` and `pnpm lint` run tsc and ESLint. `pnpm db:generate` writes a Drizzle migration into `db/migrations/` without needing a database; `pnpm db:migrate:prod` applies migrations and is run by BAM only, with `DATABASE_URL_UNPOOLED` exported in his shell.
+`pnpm test` runs the Vitest suite (the error-report scrubber, the health endpoint, the SSO helpers, the session token, the units library, the schema, mobility access and settings, the waitlist and its confirmation email, and the Inbox/Outbox bodies and signatures). `pnpm typecheck` and `pnpm lint` run tsc and ESLint. `pnpm db:generate` writes a Drizzle migration into `db/migrations/` without needing a database; `pnpm db:migrate:prod` applies migrations and is run by BAM only, with `DATABASE_URL_UNPOOLED` exported in his shell.
 
 Error monitoring goes to Better Stack over the Sentry protocol and is **off unless a DSN is set**. See [ARCHITECTURE.md § Error monitoring](./ARCHITECTURE.md#error-monitoring). Every event passes through [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts), which drops form bodies, contact details, location data, and credentials before anything is transmitted.
 
@@ -41,13 +41,14 @@ app/
   seasons/[n]/          season pages (4)
   app/                  the signed-in mobility app: dashboard and settings (units, currency, time zone)
   waitlist/             public waitlist for the mobility app (static page)
-  api/waitlist/         POST: validates, rate-limits, stores, notifies BAM in WitUS Inbox
+  api/waitlist/         POST: validates, rate-limits, stores, emails new signups a confirmation, notifies BAM in WitUS Inbox
   signin/               the only door in — "Sign in with WitUS" / "Continue as <name>"
   signed-in/            protected page proving the auth loop end to end (not a profile page)
   api/auth/witus/       OIDC authorize + callback (state + PKCE, claims from userinfo)
   api/auth/signout/     POST that destroys the local session
   api/health/           GET + HEAD liveness probe for uptime monitors
-  api/inbox-ingest/     POST endpoint that sends Mailgun email per form_type
+  api/inbox-ingest/     POST endpoint that sends Mailgun email per form_type, then forwards to WitUS Inbox
+  api/outbox/publish/   POST (admin or bearer token): episode / season / ad hoc → WitUS Outbox drafts
   styleguide/           archive of the two non-chosen design directions (not in main nav)
 components/             site header/footer, design switcher, NotifyMeForm, sign-in/out buttons
 db/
@@ -56,7 +57,12 @@ db/
 lib/
   units/                metric/imperial conversion and formatting (pure, tested)
   mobility/             access rules, settings validation, per-request mobility context
-  waitlist/             waitlist validation and the Inbox submission shape
+  waitlist/             waitlist validation, the Inbox submission shape, the confirmation email
+  witus-sender.ts       Inbox/Outbox wrapper: env, stubbing, pre-flight schema check (witus-contracts.ts)
+  sender-inbox.ts       canonical WitUS Inbox sender, copied verbatim from witus-inbox
+  sender-outbox.ts      canonical WitUS Outbox sender, copied verbatim from witus-outbox
+  inbox-forms.ts        podcast form → Inbox submission
+  outbox-posts.ts       publish event → one Outbox draft per platform
   rate-limit.ts         DB-backed fixed-window rate limit keyed by an HMAC of the IP
   auth/                 session token (HS256 over node:crypto) + the cookie data-access layer
   witus-sso.ts          SSO helpers: probe, loop guard, derived IdP URLs (pure, tested)
@@ -78,7 +84,7 @@ The four brand variants in `public/brand/` (`01-orbit`, `02-duality`, `03-type-d
 
 ## Architecture in one paragraph
 
-RideWitUS is a thin Next.js 15 App Router app with no database. The 32-episode curriculum lives in [`lib/curriculum/episodes.ts`](./lib/curriculum/episodes.ts). All pages are statically prerendered. Forms POST to [`/api/inbox-ingest`](./app/api/inbox-ingest/route.ts) which sends transactional email via Mailgun on `mg.witus.online`. Classes (CentOS Academy), flashcard decks (FlashLearnAI), and 360° tours (Wanderlearn) live in sibling apps; episode pages link out to them via stable URLs. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full picture.
+RideWitUS is a thin Next.js 15 App Router app with no database. The 32-episode curriculum lives in [`lib/curriculum/episodes.ts`](./lib/curriculum/episodes.ts). All pages are statically prerendered. Forms POST to [`/api/inbox-ingest`](./app/api/inbox-ingest/route.ts) which sends transactional email via Mailgun on `mg.witus.online` and forwards the submission to the WitUS Inbox. Classes (CentOS Academy), flashcard decks (FlashLearnAI), and 360° tours (Wanderlearn) live in sibling apps; episode pages link out to them via stable URLs. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full picture.
 
 ---
 

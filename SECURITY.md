@@ -17,6 +17,7 @@ In scope:
 
 - This codebase (`ride-wit-us`).
 - Form submissions to `/api/inbox-ingest`.
+- `/api/outbox/publish` (admin session or bearer token only). Any way to make it send without either is in scope.
 - The Mailgun integration as wired in [`lib/mailgun.ts`](./lib/mailgun.ts).
 - Brand assets in `public/brand/` (these are copied from the canonical at `gemini/witus/public/brand/`; vulnerabilities there should also be reported to the witus repo maintainer).
 

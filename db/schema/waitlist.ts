@@ -5,7 +5,8 @@ export const waitlistStatus = pgEnum("waitlist_status", ["waiting", "invited", "
 /**
  * Public waitlist for the mobility app (PRD §5.12, owner answer §13 Q11). One row per address,
  * stored lowercased. A repeat signup updates the note and does not notify the owner again;
- * `notified_at` records that the WitUS Inbox accepted the notification.
+ * `notified_at` records that the WitUS Inbox accepted the notification, and
+ * `confirmation_sent_at` that the signup's confirmation email went out.
  */
 export const waitlistEntries = pgTable("waitlist_entries", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -13,6 +14,8 @@ export const waitlistEntries = pgTable("waitlist_entries", {
   note: text("note"),
   status: waitlistStatus("status").notNull().default("waiting"),
   notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  /** When Mailgun accepted the "you're on the waitlist" email. At most one per address. */
+  confirmationSentAt: timestamp("confirmation_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

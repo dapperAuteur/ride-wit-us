@@ -75,6 +75,9 @@ export async function GET() {
             "WITUS_OIDC_CLIENT_SECRET",
             "WITUS_SESSION_SECRET"
           ),
+          // Mobility database (PRD §14): presence only. The probe never connects, so a Neon
+          // outage cannot turn this monitor red while the public site serves normally.
+          database: isConfigured("DATABASE_URL"),
         },
         time: new Date().toISOString(),
       },

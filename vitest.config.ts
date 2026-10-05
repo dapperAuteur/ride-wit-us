@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
+      // `server-only` throws outside a React Server Components build. Tests import server modules
+      // directly, so point it at an empty module here (and only here).
+      "server-only": fileURLToPath(new URL("./lib/test/server-only-stub.ts", import.meta.url)),
     },
   },
 });

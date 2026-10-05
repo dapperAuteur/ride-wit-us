@@ -7,8 +7,8 @@
 ```sh
 git clone https://github.com/dapperAuteur/ride-wit-us
 cd ride-wit-us
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Without secrets, form submissions log to stdout instead of sending email. Provision Mailgun and other env vars via `vercel env add` (see [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables)). Never commit `.env*` files — they're gitignored.
@@ -27,7 +27,7 @@ Without secrets, form submissions log to stdout instead of sending email. Provis
 1. Branch off `main`.
 2. `git merge --no-ff` each small branch in turn (preserves per-concern history — non-negotiable, no squash).
 3. Resolve any 3-way conflicts during bundling.
-4. Run a final `npm run build` against the bundle.
+4. Run a final `pnpm typecheck && pnpm lint && pnpm test && pnpm build` against the bundle.
 5. Push the bundle.
 6. File **one** user-task at `./plans/user-tasks/NN-merge-bundle-<slug>.md` for BAM to merge bundle → main.
 

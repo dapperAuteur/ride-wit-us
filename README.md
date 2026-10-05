@@ -14,17 +14,17 @@ RideWitUS is the audio-first bicycle-mechanic curriculum surface of the WitUS ec
 ```sh
 git clone https://github.com/dapperAuteur/ride-wit-us
 cd ride-wit-us
-npm install
-npm run dev          # → http://localhost:3000
+pnpm install
+pnpm dev             # → http://localhost:3000
 ```
 
-No database required. The canonical episode list is a single TypeScript source of truth at [`lib/curriculum/episodes.ts`](./lib/curriculum/episodes.ts).
+No database required for the podcast site. The mobility app under `/app` needs a Neon `DATABASE_URL`; without it every `/app` page shows a "not switched on" notice and the build still passes. The canonical episode list is a single TypeScript source of truth at [`lib/curriculum/episodes.ts`](./lib/curriculum/episodes.ts).
 
-There *is* a login — **"Sign in with WitUS", and only that**. No password, no magic link, no user table, still no database: the session is one signed cookie holding the identity the WitUS IdP returned. It stays completely dark (no button, no request to accounts.witus.online) unless `WITUS_OIDC_CLIENT_ID`, `WITUS_OIDC_CLIENT_SECRET`, and `WITUS_SESSION_SECRET` are all set, so local dev and unprovisioned deploys behave exactly as they did before. Nothing on the public site requires an account — it is here for the CentenarianOS travel module that is moving into this app. See [ARCHITECTURE.md § Authentication](./ARCHITECTURE.md#authentication).
+There *is* a login — **"Sign in with WitUS", and only that**. No password, no magic link, no user table, still no database: the session is one signed cookie holding the identity the WitUS IdP returned. It stays completely dark (no button, no request to accounts.witus.online) unless `WITUS_OIDC_CLIENT_ID`, `WITUS_OIDC_CLIENT_SECRET`, and `WITUS_SESSION_SECRET` are all set, so local dev and unprovisioned deploys behave exactly as they did before. Nothing on the public site requires an account. Signing in leads to the mobility app at `/app`, which is open to the owner (`ADMIN_EMAIL`) during the private trial; everyone else sees a waitlist link. The public waitlist is at `/waitlist`. See [ARCHITECTURE.md § Authentication](./ARCHITECTURE.md#authentication).
 
 For real form submissions to send confirmation/alert email, set `MAILGUN_API_KEY` in `.env.local`. Without it, [`lib/mailgun.ts`](./lib/mailgun.ts) logs would-be sends to stdout. Other env vars documented in [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables).
 
-`npm test` runs the Vitest suite (today: the error-report scrubber, the health endpoint, the SSO helpers, and the session token).
+`pnpm test` runs the Vitest suite (the error-report scrubber, the health endpoint, the SSO helpers, the session token, the units library, the schema, mobility access and settings, and the waitlist). `pnpm typecheck` and `pnpm lint` run tsc and ESLint. `pnpm db:generate` writes a Drizzle migration into `db/migrations/` without needing a database; `pnpm db:migrate:prod` applies migrations and is run by BAM only, with `DATABASE_URL_UNPOOLED` exported in his shell.
 
 Error monitoring goes to Better Stack over the Sentry protocol and is **off unless a DSN is set**. See [ARCHITECTURE.md § Error monitoring](./ARCHITECTURE.md#error-monitoring). Every event passes through [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts), which drops form bodies, contact details, location data, and credentials before anything is transmitted.
 
@@ -39,6 +39,9 @@ app/
   tune-in/              notify-me form + ecosystem sibling links + host listen-party form
   episodes/             catalog + episode detail (32 episodes, statically generated)
   seasons/[n]/          season pages (4)
+  app/                  the signed-in mobility app: dashboard and settings (units, currency, time zone)
+  waitlist/             public waitlist for the mobility app (static page)
+  api/waitlist/         POST: validates, rate-limits, stores, notifies BAM in WitUS Inbox
   signin/               the only door in — "Sign in with WitUS" / "Continue as <name>"
   signed-in/            protected page proving the auth loop end to end (not a profile page)
   api/auth/witus/       OIDC authorize + callback (state + PKCE, claims from userinfo)
@@ -47,7 +50,14 @@ app/
   api/inbox-ingest/     POST endpoint that sends Mailgun email per form_type
   styleguide/           archive of the two non-chosen design directions (not in main nav)
 components/             site header/footer, design switcher, NotifyMeForm, sign-in/out buttons
+db/
+  schema/               Drizzle schema: users, user_settings, vehicles, trips, places, vendor_refs, waitlist
+  migrations/           generated SQL (drizzle-kit); applied by BAM only
 lib/
+  units/                metric/imperial conversion and formatting (pure, tested)
+  mobility/             access rules, settings validation, per-request mobility context
+  waitlist/             waitlist validation and the Inbox submission shape
+  rate-limit.ts         DB-backed fixed-window rate limit keyed by an HMAC of the IP
   auth/                 session token (HS256 over node:crypto) + the cookie data-access layer
   witus-sso.ts          SSO helpers: probe, loop guard, derived IdP URLs (pure, tested)
   witus-sso-config.ts   the half of the above that reads env and request headers
@@ -122,8 +132,9 @@ body.
 
 ## Integration with CentenarianOS
 
-**Today:** none at the data level. RideWitUS has no database and no trip, vehicle, or fuel code; trips,
-vehicles, fuel, and maintenance still live in CentenarianOS's travel module. The only shared pieces are
+**Today:** none at the data level. RideWitUS now has a database schema (users, settings, vehicles, trips,
+places, vendor references, waitlist) and a signed-in shell at `/app`, but no trip or vehicle screens yet;
+trips, vehicles, fuel, and maintenance still live in CentenarianOS's travel module. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
 
 **Proposed (decided 2026-08-27, not built):** RideWitUS grows a database and becomes the system of record

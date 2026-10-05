@@ -8,12 +8,13 @@
 | Language | **TypeScript** | Strict mode; no codegen |
 | Styling | **Tailwind CSS 3** + CSS variables for theme tokens | Per `public/brand/footer-recipe.md` |
 | Hosting | **Vercel** (Fluid Compute) | Ecosystem default — see `vercel:bootstrap` skill |
-| Database | **None** | All persistent state owned by sibling apps — including for signed-in people |
+| Database | **Neon Postgres + Drizzle** (mobility only) | Added 2026-10-05 for the mobility module (WitUS decision 1). Schema in `db/schema/`, migrations in `db/migrations/`. Read lazily from `DATABASE_URL`; public pages never touch it and `/app` fails closed without it |
+| Package manager | **pnpm** | Ecosystem default stack |
 | Auth | **WitUS SSO only** | OIDC code flow against `accounts.witus.online`; session is a signed cookie, no user table. Admin is one address via `ADMIN_EMAIL`, failing closed. Dark until provisioned — see § Authentication |
 | Email | **Mailgun** on `mg.witus.online` | Ecosystem domain |
 | Analytics | **Vercel Analytics** | Drop-in, no PII |
 | Error monitoring | **Better Stack** via `@sentry/nextjs` | Sentry-protocol ingest; inert without a DSN, and every event is scrubbed by `lib/sentry-scrub.ts` |
-| Tests | **Vitest** | Ecosystem default; `npm test` |
+| Tests | **Vitest** | Ecosystem default; `pnpm test` |
 
 ## What this app owns vs. what it links to
 
@@ -96,6 +97,8 @@ When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true
 /episodes                       catalog (anchors: #season-1..4)
 /episodes/[slug]                32 prerendered episode pages
 /seasons/[n]                    4 prerendered season pages
+/waitlist                       public mobility waitlist (static)
+/api/waitlist                   POST waitlist signup (dynamic; 503 without DATABASE_URL)
 /api/health                     GET + HEAD uptime probe (dynamic, no-store)
 /api/inbox-ingest               POST endpoint (dynamic)
 /api/outbox/publish             POST endpoint (dynamic)
@@ -103,7 +106,9 @@ When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true
 
 # Authentication — see § Authentication. All dynamic, all noindex.
 /signin                         the only door in ("Sign in with WitUS" / "Continue as <name>")
-/signed-in                      protected; proves the loop end to end. NOT a profile page.
+/signed-in                      protected; proves the loop end to end. Superseded by /app as the post-sign-in landing
+/app                            mobility dashboard (signed in; owner or member; gate otherwise)
+/app/settings                   default units, home currency, time zone
 /api/auth/witus/authorize       GET  starts the OIDC code flow (state + PKCE)
 /api/auth/witus/callback        GET  finishes it and mints the session cookie
 /api/auth/signout               POST destroys the local session (303 to /, or 200 JSON)
@@ -152,6 +157,9 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `WITUS_SESSION_SECRET` | For sign-in | — | HMAC key for this app's session cookie. Not shared with any other app; rotating it signs everyone out |
 | `WITUS_OIDC_ISSUER` | No | `https://accounts.witus.online/api/idp` | One value; all four OIDC endpoints and the session-probe origin derive from it |
 | `NEXT_PUBLIC_SITE_URL` | No | request host | Canonical origin for the `redirect_uri` and `post_logout_redirect_uri`. Both derive from the same value so they cannot disagree |
+| `DATABASE_URL` | For mobility | — | Pooled Neon connection string. Unset ⇒ `/app` shows "not switched on", `/api/waitlist` returns 503, the build still passes |
+| `DATABASE_URL_UNPOOLED` | Migrations only | — | Direct Neon URL for `pnpm db:migrate:prod`, exported in BAM's shell, never committed |
+| `RATE_LIMIT_SALT` | Recommended | — | HMAC key for rate-limit bucket keys so stored keys cannot be reversed to IPs |
 | `SENTRY_DSN` | No | — | Better Stack ingest DSN for server + edge errors. Unset ⇒ the SDK never initializes |
 | `NEXT_PUBLIC_SENTRY_DSN` | No | — | Same source, browser side. Inlined at build time |
 | `SENTRY_ENVIRONMENT` | No | `VERCEL_ENV` → `NODE_ENV` | Label on every event |
@@ -304,13 +312,36 @@ a separate branch's job.
 
 ---
 
+## Mobility database (added 2026-10-05)
+
+The mobility module is the first thing in this app that stores data. It follows the ecosystem default
+stack (Neon + Drizzle + pnpm).
+
+- **Schema** (`db/schema/`): `users` keyed by `witus_sub` (the IdP subject, never email), `user_settings`
+  (unit system, home currency, time zone), `vehicles` (car, bike, e-bike, motorcycle, scooter, shoes; with
+  depreciation inputs), `trips` (every mode including flights, with itinerary fields), `places`,
+  `vendor_refs` (CentenarianOS contact ids only, no vendor details), `waitlist_entries`, `rate_limit_buckets`.
+- **Units:** stored metric (meters, liters, kg, kPa, m/s). `lib/units/` converts at display and input; each
+  page has a toggle for the other system that does not change the saved default.
+- **Money:** amount plus ISO 4217 currency, as entered. RideWitUS never converts; CentenarianOS owns rates.
+- **Fail closed:** `getDb()` is lazy and throws without `DATABASE_URL`. `/app` pages check the per-request
+  mobility context first and render a gate for "no database", "database error", and "waitlisted".
+- **Access:** the owner is whoever `ADMIN_EMAIL` names, decided per request; `member` is granted later;
+  everyone else is waitlisted (`lib/mobility/access.ts`).
+- **Waitlist:** `POST /api/waitlist` stores the signup and, once per address, notifies BAM through
+  `sendToInbox` with WitUS Inbox's documented shape (`form_type: ride_waitlist_signup`, `submitter_email`,
+  `payload`).
+- **Migrations:** `pnpm db:generate` needs no database. BAM applies them with `pnpm db:migrate:prod`.
+
+---
+
 ## Error monitoring
 
 Errors are reported to **Better Stack**, which ingests over the Sentry protocol, so the client is the standard `@sentry/nextjs` SDK pointed at a Better Stack DSN. Nothing about the wiring is vendor-specific: swapping the DSN swaps the destination.
 
 - **Inert by default.** [`sentry.server.config.ts`](./sentry.server.config.ts), [`sentry.edge.config.ts`](./sentry.edge.config.ts), and [`instrumentation-client.ts`](./instrumentation-client.ts) each guard `Sentry.init()` behind a DSN check. With no DSN set, no SDK is initialized and no request leaves the process, so local dev and previews are unaffected until BAM provisions the source.
 - **Errors only.** `tracesSampleRate: 0`, both replay rates `0`, `sendDefaultPii: false`. Session replay in particular is off on purpose: it would record the `/tune-in` form as it is typed.
-- **Everything is scrubbed before transmission.** [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts) is the `beforeSend` hook on every runtime. It deletes the request body outright (the three `/api/inbox-ingest` form types are all contact details plus a neighborhood), drops cookies and credential headers including `X-Witus-Signature`, strips user identity, and redacts emails, JWTs, HMACs, labelled secrets, token-bearing URLs, street addresses, and lat/lng pairs from messages, exception values, extra, tags, and breadcrumbs. It is covered by [`lib/sentry-scrub.test.ts`](./lib/sentry-scrub.test.ts) (`npm test`).
+- **Everything is scrubbed before transmission.** [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts) is the `beforeSend` hook on every runtime. It deletes the request body outright (the three `/api/inbox-ingest` form types are all contact details plus a neighborhood), drops cookies and credential headers including `X-Witus-Signature`, strips user identity, and redacts emails, JWTs, HMACs, labelled secrets, token-bearing URLs, street addresses, and lat/lng pairs from messages, exception values, extra, tags, and breadcrumbs. It is covered by [`lib/sentry-scrub.test.ts`](./lib/sentry-scrub.test.ts) (`pnpm test`).
 - **No Content-Security-Policy** ships from this app today, so no `connect-src` allowance is needed. If one is added later it must include the DSN origin or browser-side reports will fail silently. Re-confirmed 2026-08-23 by an ecosystem-wide audit: there is no CSP in `next.config.mjs`, no `middleware.ts`, no `vercel.json` header, and no `<meta http-equiv>` in the root layout.
 - **The root layout has its own boundary.** [`app/global-error.tsx`](./app/global-error.tsx) catches a crash in the root layout itself, which `error.tsx` cannot catch because the layout is the thing that broke. It renders its own `<html>`/`<body>` with inline styles and imports nothing but the Sentry SDK, so a broken component or an unloaded stylesheet cannot take the error page down with it.
 
@@ -339,7 +370,7 @@ monitors. It is a **liveness probe**, not a delivery check.
 
 ## Build + deploy
 
-- `npm run build` produces a static-first build with eight dynamic routes: `/api/health`, `/api/inbox-ingest`, `/api/outbox/publish`, and the five authentication routes (`/signin`, `/signed-in`, `/api/auth/witus/authorize`, `/api/auth/witus/callback`, `/api/auth/signout`).
+- `pnpm build` produces a static-first build with these dynamic routes: `/api/health`, `/api/inbox-ingest`, `/api/outbox/publish`, `/api/waitlist`, the five authentication routes (`/signin`, `/signed-in`, `/api/auth/witus/authorize`, `/api/auth/witus/callback`, `/api/auth/signout`), and the mobility app (`/app`, `/app/settings`). It passes with no database env.
 - All 38+ public pages are statically prerendered via `generateStaticParams()`.
 - Deploy via Vercel (the ecosystem default). The branch policy in [CONTRIBUTING.md](./CONTRIBUTING.md) requires BAM to merge to `main` via the GitHub UI; Vercel auto-deploys main → production and branches → preview.
 

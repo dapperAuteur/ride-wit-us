@@ -4,15 +4,17 @@ import { getDb } from "@/db";
 import { waitlistEntries } from "@/db/schema";
 import { databaseConfigured } from "@/lib/db/config";
 import { clientIp, consumeRateLimit, rateLimitKey } from "@/lib/rate-limit";
+import { sendWaitlistConfirmation } from "@/lib/waitlist/confirmation";
 import { buildWaitlistInboxSubmission, isHoneypotFilled, parseWaitlist } from "@/lib/waitlist/validate";
 import { sendToInbox } from "@/lib/witus-sender";
 
 // POST /api/waitlist — public signup for the mobility app (PRD §5.12).
 //
 // Flow: fail closed without a database (503) → honeypot (silent success, nothing stored) →
-// validate → rate limit per IP (5 an hour) → upsert by email → after the response, notify BAM in
-// WitUS Inbox once per address. The response is identical for a new and a repeat signup, so the
-// endpoint does not reveal who is already on the list.
+// validate → rate limit per IP (5 an hour) → upsert by email → after the response: send the
+// person one confirmation email (new signups only; skipped and logged without Mailgun) and notify
+// BAM in WitUS Inbox once per address. The response is identical for a new and a repeat signup, so
+// the endpoint does not reveal who is already on the list.
 //
 // Logs carry fixed tokens and error class names only: never the email, note, or IP.
 
@@ -60,7 +62,31 @@ export async function POST(request: NextRequest) {
           updatedAt: sql`now()`,
         },
       })
-      .returning({ id: waitlistEntries.id, notifiedAt: waitlistEntries.notifiedAt, createdAt: waitlistEntries.createdAt });
+      .returning({
+        id: waitlistEntries.id,
+        notifiedAt: waitlistEntries.notifiedAt,
+        createdAt: waitlistEntries.createdAt,
+        // Postgres sets the system column xmax to 0 on a freshly inserted row and to the updating
+        // transaction's id when ON CONFLICT DO UPDATE took the update path: true = new signup.
+        inserted: sql<boolean>`(xmax = 0)`,
+      });
+
+    // New signups only: a repeat signup never re-sends the confirmation email.
+    if (row?.inserted) {
+      const email = parsed.data.email;
+      after(async () => {
+        const outcome = await sendWaitlistConfirmation(email);
+        if (outcome !== "sent") return;
+        try {
+          await getDb()
+            .update(waitlistEntries)
+            .set({ confirmationSentAt: sql`now()` })
+            .where(eq(waitlistEntries.id, row.id));
+        } catch (err) {
+          console.error("[waitlist] mark confirmation failed err=%s", err instanceof Error ? err.name : "UnknownError");
+        }
+      });
+    }
 
     if (row && !row.notifiedAt) {
       const submission = buildWaitlistInboxSubmission({ ...parsed.data, joinedAt: row.createdAt });

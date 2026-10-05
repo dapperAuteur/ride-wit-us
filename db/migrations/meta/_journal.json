@@ -8,6 +8,13 @@
       "when": 1791235854219,
       "tag": "0000_mobility_foundations",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791242622282,
+      "tag": "0001_waitlist_confirmation_sent_at",
+      "breakpoints": true
     }
   ]
 }

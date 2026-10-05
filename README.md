@@ -24,7 +24,7 @@ There *is* a login — **"Sign in with WitUS", and only that**. No password, no 
 
 For real form submissions to send confirmation/alert email, set `MAILGUN_API_KEY` in `.env.local`. Without it, [`lib/mailgun.ts`](./lib/mailgun.ts) logs would-be sends to stdout. Other env vars documented in [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables).
 
-`pnpm test` runs the Vitest suite (the error-report scrubber, the health endpoint, the SSO helpers, the session token, the units library, the schema, mobility access and settings, and the waitlist). `pnpm typecheck` and `pnpm lint` run tsc and ESLint. `pnpm db:generate` writes a Drizzle migration into `db/migrations/` without needing a database; `pnpm db:migrate:prod` applies migrations and is run by BAM only, with `DATABASE_URL_UNPOOLED` exported in his shell.
+`pnpm test` runs the Vitest suite (the error-report scrubber, the health endpoint, the SSO helpers, the session token, the units library, the schema, mobility access and settings, the vehicle/trip/place/journey forms including unit conversion at the form boundary, the ownership guard, trip grouping and per-currency subtotals, and the waitlist). `pnpm typecheck` and `pnpm lint` run tsc and ESLint. `pnpm db:generate` writes a Drizzle migration into `db/migrations/` without needing a database; `pnpm db:migrate:prod` applies migrations and is run by BAM only, with `DATABASE_URL_UNPOOLED` exported in his shell.
 
 Error monitoring goes to Better Stack over the Sentry protocol and is **off unless a DSN is set**. See [ARCHITECTURE.md § Error monitoring](./ARCHITECTURE.md#error-monitoring). Every event passes through [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts), which drops form bodies, contact details, location data, and credentials before anything is transmitted.
 
@@ -39,7 +39,8 @@ app/
   tune-in/              notify-me form + ecosystem sibling links + host listen-party form
   episodes/             catalog + episode detail (32 episodes, statically generated)
   seasons/[n]/          season pages (4)
-  app/                  the signed-in mobility app: dashboard and settings (units, currency, time zone)
+  app/                  the signed-in mobility app: dashboard, trips and multi-leg itineraries (flights,
+                        lodging), vehicles, saved places, settings (units, currency, time zone)
   waitlist/             public waitlist for the mobility app (static page)
   api/waitlist/         POST: validates, rate-limits, stores, notifies BAM in WitUS Inbox
   signin/               the only door in — "Sign in with WitUS" / "Continue as <name>"
@@ -51,11 +52,14 @@ app/
   styleguide/           archive of the two non-chosen design directions (not in main nav)
 components/             site header/footer, design switcher, NotifyMeForm, sign-in/out buttons
 db/
-  schema/               Drizzle schema: users, user_settings, vehicles, trips, places, vendor_refs, waitlist
+  schema/               Drizzle schema: users, user_settings, vehicles, trips, journeys, lodging_stays, places,
+                        vendor_refs, waitlist
   migrations/           generated SQL (drizzle-kit); applied by BAM only
 lib/
   units/                metric/imperial conversion and formatting (pure, tested)
-  mobility/             access rules, settings validation, per-request mobility context
+  mobility/             access rules, per-request context, form validation (vehicles, trips, journeys, stays,
+                        places), owner checks for every referenced id, per-currency subtotals, time zones,
+                        itinerary grouping
   waitlist/             waitlist validation and the Inbox submission shape
   rate-limit.ts         DB-backed fixed-window rate limit keyed by an HMAC of the IP
   auth/                 session token (HS256 over node:crypto) + the cookie data-access layer
@@ -132,9 +136,10 @@ body.
 
 ## Integration with CentenarianOS
 
-**Today:** none at the data level. RideWitUS now has a database schema (users, settings, vehicles, trips,
-places, vendor references, waitlist) and a signed-in shell at `/app`, but no trip or vehicle screens yet;
-trips, vehicles, fuel, and maintenance still live in CentenarianOS's travel module. The only shared pieces are
+**Today:** none at the data level. RideWitUS now has a database and, at `/app`, screens for vehicles, trips
+(every mode, flights included), multi-leg trips with lodging stays, and saved places (Phase 1a). Nothing is
+sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
+maintenance until the Stage 4 migration. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
 
 **Proposed (decided 2026-08-27, not built):** RideWitUS grows a database and becomes the system of record

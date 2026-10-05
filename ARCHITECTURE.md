@@ -109,6 +109,13 @@ When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true
 /signed-in                      protected; proves the loop end to end. Superseded by /app as the post-sign-in landing
 /app                            mobility dashboard (signed in; owner or member; gate otherwise)
 /app/settings                   default units, home currency, time zone
+/app/vehicles                   vehicles in use and retired; /new, /[id] edit + delete
+/app/trips                      trips and multi-leg trips, filter planned/done, per-currency subtotals
+/app/trips/new                  log a trip; ?journey=<id> adds a leg to a multi-leg trip
+/app/trips/[id]                 edit or delete a trip or leg
+/app/journeys/new               plan a multi-leg trip
+/app/journeys/[id]              itinerary (legs + stays in order); /edit; /stays/new; /stays/[stayId]
+/app/places                     saved places with aliases; /new, /[id] edit + delete
 /api/auth/witus/authorize       GET  starts the OIDC code flow (state + PKCE)
 /api/auth/witus/callback        GET  finishes it and mints the session cookie
 /api/auth/signout               POST destroys the local session (303 to /, or 200 JSON)
@@ -332,6 +339,40 @@ stack (Neon + Drizzle + pnpm).
   `sendToInbox` with WitUS Inbox's documented shape (`form_type: ride_waitlist_signup`, `submitter_email`,
   `payload`).
 - **Migrations:** `pnpm db:generate` needs no database. BAM applies them with `pnpm db:migrate:prod`.
+  `0001_mobility_vehicles_trips` (Phase 1a) adds `journeys`, `lodging_stays`, trip leg columns
+  (`journey_id`, `leg_order`, `depart_tz`, `arrive_tz`), and the `shared` ownership and `personal` purpose
+  values. Additive only.
+
+### Vehicles, trips, places (Phase 1a)
+
+Screens under `/app`, all server components with server actions (`app/app/*/actions.ts`); the forms are
+small client components built from `components/mobility/form-kit.tsx`.
+
+- **Vehicles** (`/app/vehicles`): every kind, ownership owned / rented / borrowed / shared, purchase price
+  with its currency, starting odometer and expected life entered in the page's units and stored as meters,
+  in use or retired. Distance logged on trips is summed per vehicle (round trips twice).
+- **Trips** (`/app/trips`): any mode, optional vehicle, saved-place or typed ends, round trip (distance
+  stored one way, counted twice in totals), duration, purpose, status (planned / in progress / done /
+  cancelled), cost with its currency. Departure and arrival are entered as local clock time plus an IANA
+  zone (`lib/mobility/zoned-time.ts`) and stored as an instant plus the zone, so a flight shows each end in
+  its own zone. Booking fields (carrier, flight number, confirmation as typed, seat, terminal, gate, link)
+  appear for booked modes. The list filters planned and done and shows per-currency subtotals.
+- **Multi-leg trips** (`journeys`, `/app/journeys/[id]`): a named trip grouping legs (`trips.journey_id`,
+  ports CentenarianOS `trip_routes` + `route_id`) and lodging stays (`lodging_stays`: check-in / check-out,
+  place, confirmation, cost with its currency). The itinerary orders legs and stays by local date, legs
+  before the day's check-in. Deleting a journey deletes its legs and stays.
+- **Places** (`/app/places`): saved places with aliases. Names are compared case- and punctuation-blind; a
+  place that would answer to another place's name is refused. A typed trip end that matches a label or
+  alias links to that place. The home place never leaves RideWitUS: any future emitter must pass places
+  through `shareablePlace()` in `lib/mobility/places.ts`, which returns null for home.
+- **Ownership:** every read filters on `user_id`; every update and delete matches `id` **and** `user_id`;
+  every foreign id a form submits (vehicle, origin and destination place, journey, stay place) is checked
+  by `verifyOwnedRefs()` (`lib/mobility/ownership.ts`) against the signed-in owner before the write. Ids
+  in URLs are format-checked first so a hand-typed URL is a 404, not a database error.
+- **Money:** each amount keeps its currency; totals are one subtotal per currency
+  (`lib/mobility/money.ts`, integer cents), labelled "not converted" when there is more than one.
+- **CO2:** ported from CentenarianOS `CO2_PER_MILE` onto meters; modes CentenarianOS has no factor for
+  (e-bike, scooter, motorcycle, taxi) get no estimate rather than a guessed one.
 
 ---
 
@@ -370,7 +411,7 @@ monitors. It is a **liveness probe**, not a delivery check.
 
 ## Build + deploy
 
-- `pnpm build` produces a static-first build with these dynamic routes: `/api/health`, `/api/inbox-ingest`, `/api/outbox/publish`, `/api/waitlist`, the five authentication routes (`/signin`, `/signed-in`, `/api/auth/witus/authorize`, `/api/auth/witus/callback`, `/api/auth/signout`), and the mobility app (`/app`, `/app/settings`). It passes with no database env.
+- `pnpm build` produces a static-first build with these dynamic routes: `/api/health`, `/api/inbox-ingest`, `/api/outbox/publish`, `/api/waitlist`, the five authentication routes (`/signin`, `/signed-in`, `/api/auth/witus/authorize`, `/api/auth/witus/callback`, `/api/auth/signout`), and the mobility app (`/app` and everything under it: settings, vehicles, trips, journeys, places). It passes with no database env.
 - All 38+ public pages are statically prerendered via `generateStaticParams()`.
 - Deploy via Vercel (the ecosystem default). The branch policy in [CONTRIBUTING.md](./CONTRIBUTING.md) requires BAM to merge to `main` via the GitHub UI; Vercel auto-deploys main → production and branches → preview.
 

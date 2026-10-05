@@ -1,6 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { sendMail, getBamNotifyEmail, type MailgunResult } from "@/lib/mailgun";
-import { sendToInbox, type WitusSendResult } from "@/lib/witus-sender";
+import { sendToInbox } from "@/lib/witus-sender";
+import {
+  buildFormInboxSubmission,
+  emailFromContact,
+  type ClassNotifyPayload,
+  type FormPayload,
+  type GeneralContactPayload,
+  type HostListenPartyPayload,
+} from "@/lib/inbox-forms";
 import { APP_NAME } from "@/lib/site-meta";
 import { episodeBySlug } from "@/lib/curriculum/episodes";
 import { seasonOf } from "@/lib/curriculum/season-colors";
@@ -14,36 +22,10 @@ import { seasonOf } from "@/lib/curriculum/season-colors";
 //   1. A confirmation/thank-you email to the submitter (when we have an email)
 //   2. An alert to BAM at BAM_NOTIFY_EMAIL with the full payload
 //
-// Phase 4 (deferred) layers in: signed-HMAC forward to witus-inbox so triage
-// has a single queue across the ecosystem. Mailgun stays as the per-app
-// transactional sender.
-
-interface ClassNotifyPayload {
-  form_type: "class_notify_signup";
-  email: string;
-  name?: string;
-  selected_all?: boolean;
-  selected_seasons?: number[];
-  selected_episodes?: string[];
-}
-
-interface HostListenPartyPayload {
-  form_type: "host_listen_party";
-  org_name: string;
-  contact: string;
-  neighborhood: string;
-  preferred_date?: string;
-  notes?: string;
-}
-
-interface GeneralContactPayload {
-  form_type: "general_contact";
-  name: string;
-  email: string;
-  message: string;
-}
-
-type Payload = ClassNotifyPayload | HostListenPartyPayload | GeneralContactPayload;
+// Then, after the response, the validated form is forwarded to the WitUS Inbox
+// (signed HMAC, lib/witus-sender.ts) so triage has one queue across the
+// ecosystem. The Inbox body is built by lib/inbox-forms.ts in the shape the
+// Inbox validates. Mailgun stays the per-app transactional sender.
 
 async function readPayload(req: NextRequest): Promise<Record<string, unknown> | null> {
   const ct = req.headers.get("content-type") ?? "";
@@ -114,8 +96,7 @@ async function handleHostListenParty(p: HostListenPartyPayload): Promise<Mailgun
   // We only have a free-form contact field, not a guaranteed email — so we
   // attempt to extract one for confirmation; otherwise we skip the submitter
   // confirmation and just alert BAM.
-  const emailMatch = p.contact.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
-  const submitterEmail = emailMatch?.[0];
+  const submitterEmail = emailFromContact(p.contact);
 
   const sends: Promise<MailgunResult>[] = [];
 
@@ -181,7 +162,7 @@ export async function POST(req: NextRequest) {
   };
 
   let mailResults: MailgunResult[] = [];
-  let inboxResult: WitusSendResult | null = null;
+  let form: FormPayload;
 
   try {
     if (formType === "class_notify_signup") {
@@ -196,6 +177,7 @@ export async function POST(req: NextRequest) {
       if (!p.email) {
         return NextResponse.json({ ok: false, error: "missing_email" }, { status: 400 });
       }
+      form = p;
       mailResults = await handleClassNotify(p);
     } else if (formType === "host_listen_party") {
       const p: HostListenPartyPayload = {
@@ -209,6 +191,7 @@ export async function POST(req: NextRequest) {
       if (!p.org_name || !p.contact || !p.neighborhood) {
         return NextResponse.json({ ok: false, error: "missing_required_fields" }, { status: 400 });
       }
+      form = p;
       mailResults = await handleHostListenParty(p);
     } else if (formType === "general_contact") {
       const p: GeneralContactPayload = {
@@ -220,25 +203,22 @@ export async function POST(req: NextRequest) {
       if (!p.name || !p.email || !p.message) {
         return NextResponse.json({ ok: false, error: "missing_required_fields" }, { status: 400 });
       }
+      form = p;
       mailResults = await handleGeneralContact(p);
     } else {
       return NextResponse.json({ ok: false, error: `unknown_form_type:${formType}` }, { status: 400 });
     }
-
-    // After sending email, also forward the raw payload to the WitUS Inbox
-    // so triage has a single cross-product queue. This is fire-and-forget
-    // semantically — if the Inbox is unreachable, we still consider the
-    // form submission successful because the user got their email.
-    inboxResult = await sendToInbox({
-      form_type: formType,
-      ...raw,
-      _source_app: "ridewitus",
-      _received_at: new Date().toISOString(),
-    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "internal_error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
+
+  // Forward to the WitUS Inbox after the response, so an Inbox outage or slow hop never fails or
+  // delays the form. The submitter already has their confirmation email.
+  const submission = buildFormInboxSubmission(form);
+  after(async () => {
+    await sendToInbox(submission);
+  });
 
   const mailOk = mailResults.every((r) => r.ok);
   const anyMailStubbed = mailResults.some((r) => r.stubbed);
@@ -247,7 +227,6 @@ export async function POST(req: NextRequest) {
     ok: mailOk,
     form_type: formType,
     mail: { count: mailResults.length, stubbed: anyMailStubbed },
-    inbox: inboxResult ? { ok: inboxResult.ok, stubbed: !!inboxResult.stubbed } : null,
     ...(mailOk ? {} : { errors: mailResults.filter((r) => !r.ok).map((r) => r.error) }),
   });
 }

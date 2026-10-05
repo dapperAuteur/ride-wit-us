@@ -1,40 +1,57 @@
-// lib/witus-sender.ts — signed HMAC sender for the WitUS Inbox + Outbox APIs.
+// lib/witus-sender.ts — this app's wrapper around the canonical WitUS Inbox and Outbox senders.
 //
-// Both apps speak the same canonical webhook contract (vetted in
-// claude/witus-inbox/examples/sender.ts):
+// The signing itself is NOT done here. It lives in two files copied byte for byte from the
+// receivers, as their integration guides require ("do not modify the file"):
+//
+//   lib/sender-inbox.ts   ← claude/witus-inbox  examples/sender.ts
+//   lib/sender-outbox.ts  ← claude/witus-outbox examples/sender.ts
+//
+// Both speak the same signed-webhook contract:
 //
 //   POST <ingest-url>
 //   X-Witus-Source: <source-slug>
 //   X-Witus-Timestamp: <unix-sec>
 //   X-Witus-Signature: sha256=<hex(HMAC-SHA256(secret, `${timestamp}.${rawBody}`))>
 //   Content-Type: application/json
-//   <rawBody>
 //
-// 5-minute replay window enforced on the receiver. Constant-time signature
-// comparison on the receiver. Senders just sign and post.
+// What this wrapper adds:
+//   1. Reads the credential triple from env. A missing triple stubs the call (logs that a send was
+//      skipped, never the body) and returns { ok: true, stubbed: true }, so local dev and
+//      unprovisioned deploys keep working.
+//   2. Pre-flight validates the body against a copy of the receiver's schema
+//      (lib/witus-contracts.ts). A body the receiver would 400 is refused here instead.
+//   3. Catches network errors (the canonical senders let fetch throw).
+//   4. Logs metadata only: channel, form_type / platform + external_ref, HTTP status.
 //
-// RideWitUS uses three credential triples in production:
-//   INBOX_INGEST_URL     + INBOX_INGEST_SECRET     + INBOX_SOURCE_SLUG
-//     → forms (class_notify_signup, host_listen_party, general_contact)
-//   OUTBOX_INGEST_URL    + OUTBOX_INGEST_SECRET    + OUTBOX_SOURCE_SLUG
-//     → general bike content posts (one-off announcements, ride recaps)
-//   OUTBOX_INGEST_URL    + OUTBOX_PODCAST_RWU_SECRET + OUTBOX_PODCAST_RWU_SLUG
-//     → podcast-specific publishing pipeline (episode-published,
-//       season-complete) — separate credential pair so the podcast channel
-//       can be revoked / rotated independently.
-//
-// All env vars are optional at build time; if a credential triple is missing
-// we log to stdout and return { ok: true, stubbed: true } so dev flows keep
-// moving without provisioning.
+// Credential triples:
+//   INBOX_INGEST_URL  + INBOX_INGEST_SECRET       + INBOX_SOURCE_SLUG        → Inbox (forms, waitlist)
+//   OUTBOX_INGEST_URL + OUTBOX_INGEST_SECRET      + OUTBOX_SOURCE_SLUG       → Outbox, general posts
+//   OUTBOX_INGEST_URL + OUTBOX_PODCAST_RWU_SECRET + OUTBOX_PODCAST_RWU_SLUG  → Outbox, podcast posts
+//     (separate pair so the podcast channel can be revoked or rotated on its own)
 
-import { createHmac } from "node:crypto";
+import { sendToInbox as canonicalSendToInbox, type InboxSubmission } from "./sender-inbox";
+import {
+  sendToOutbox as canonicalSendToOutbox,
+  type OutboxSubmission,
+  type OutboxPlatform,
+} from "./sender-outbox";
+import { inboxIngestSchema, outboxIngestSchema } from "./witus-contracts";
+
+export type { InboxSubmission, OutboxSubmission, OutboxPlatform };
 
 export interface WitusSendResult {
   ok: boolean;
   stubbed?: boolean;
   status?: number;
+  /** Receiver-assigned row id on success. */
+  id?: string;
+  /** Outbox only: the row's status. "draft" / "queued" = new row; anything else = idempotent match. */
+  recordStatus?: string;
+  /** Short machine-readable reason on failure. Never contains the body. */
   error?: string;
 }
+
+export type OutboxChannel = "general" | "podcast";
 
 interface SenderConfig {
   url: string;
@@ -42,80 +59,80 @@ interface SenderConfig {
   sourceSlug: string;
 }
 
-function readConfig(prefix: "INBOX" | "OUTBOX_GENERAL" | "OUTBOX_PODCAST"): SenderConfig | null {
-  const map = {
-    INBOX: {
-      url: process.env.INBOX_INGEST_URL,
-      secret: process.env.INBOX_INGEST_SECRET,
-      sourceSlug: process.env.INBOX_SOURCE_SLUG,
-    },
-    OUTBOX_GENERAL: {
-      url: process.env.OUTBOX_INGEST_URL,
-      secret: process.env.OUTBOX_INGEST_SECRET,
-      sourceSlug: process.env.OUTBOX_SOURCE_SLUG,
-    },
-    OUTBOX_PODCAST: {
-      url: process.env.OUTBOX_INGEST_URL,
-      secret: process.env.OUTBOX_PODCAST_RWU_SECRET,
-      sourceSlug: process.env.OUTBOX_PODCAST_RWU_SLUG,
-    },
-  };
-  const cfg = map[prefix];
-  if (!cfg.url || !cfg.secret || !cfg.sourceSlug) return null;
-  return { url: cfg.url, secret: cfg.secret, sourceSlug: cfg.sourceSlug };
+function readConfig(target: "inbox" | OutboxChannel): SenderConfig | null {
+  const env = process.env;
+  const raw =
+    target === "inbox"
+      ? { url: env.INBOX_INGEST_URL, secret: env.INBOX_INGEST_SECRET, sourceSlug: env.INBOX_SOURCE_SLUG }
+      : target === "general"
+        ? { url: env.OUTBOX_INGEST_URL, secret: env.OUTBOX_INGEST_SECRET, sourceSlug: env.OUTBOX_SOURCE_SLUG }
+        : { url: env.OUTBOX_INGEST_URL, secret: env.OUTBOX_PODCAST_RWU_SECRET, sourceSlug: env.OUTBOX_PODCAST_RWU_SLUG };
+  if (!raw.url || !raw.secret || !raw.sourceSlug) return null;
+  return { url: raw.url, secret: raw.secret, sourceSlug: raw.sourceSlug };
 }
 
-async function postSigned(cfg: SenderConfig, payload: unknown, label: string): Promise<WitusSendResult> {
-  const rawBody = JSON.stringify(payload);
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const signature = createHmac("sha256", cfg.secret)
-    .update(`${timestamp}.${rawBody}`)
-    .digest("hex");
-
+/** Send one submission to the WitUS Inbox. Never throws. */
+export async function sendToInbox(submission: InboxSubmission): Promise<WitusSendResult> {
+  if (!inboxIngestSchema.safeParse(submission).success) {
+    console.error("[inbox] refused: body fails the Inbox schema form_type=%s", submission.form_type);
+    return { ok: false, error: "invalid_submission" };
+  }
+  const cfg = readConfig("inbox");
+  if (!cfg) {
+    console.log("[inbox stub] no Inbox env; skipped form_type=%s", submission.form_type);
+    return { ok: true, stubbed: true };
+  }
   try {
-    const res = await fetch(cfg.url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "X-Witus-Source": cfg.sourceSlug,
-        "X-Witus-Timestamp": timestamp,
-        "X-Witus-Signature": `sha256=${signature}`,
-      },
-      body: rawBody,
+    const r = await canonicalSendToInbox({
+      inboxUrl: cfg.url,
+      sourceSlug: cfg.sourceSlug,
+      hmacSecret: cfg.secret,
+      submission,
     });
-    if (!res.ok) {
-      const text = await res.text();
-      return { ok: false, status: res.status, error: text.slice(0, 500) };
+    if (!r.ok) {
+      console.error("[inbox] rejected source=%s form_type=%s status=%d", cfg.sourceSlug, submission.form_type, r.status);
+      return { ok: false, status: r.status, error: "rejected" };
     }
-    return { ok: true, status: res.status };
+    return { ok: true, status: r.status, id: r.id };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "unknown_error";
-    // eslint-disable-next-line no-console
-    console.error(`[${label}] send failed`, message);
-    return { ok: false, error: message };
+    console.error("[inbox] send failed err=%s", err instanceof Error ? err.name : "UnknownError");
+    return { ok: false, error: "network_error" };
   }
 }
 
-function stub(label: string, payload: unknown): WitusSendResult {
-  // eslint-disable-next-line no-console
-  console.log(`[${label} stub]`, JSON.stringify(payload));
-  return { ok: true, stubbed: true };
-}
-
-export async function sendToInbox(payload: Record<string, unknown>): Promise<WitusSendResult> {
-  const cfg = readConfig("INBOX");
-  if (!cfg) return stub("inbox", payload);
-  return postSigned(cfg, payload, "inbox");
-}
-
-export async function sendToOutbox(payload: Record<string, unknown>): Promise<WitusSendResult> {
-  const cfg = readConfig("OUTBOX_GENERAL");
-  if (!cfg) return stub("outbox.general", payload);
-  return postSigned(cfg, payload, "outbox.general");
-}
-
-export async function sendPodcastToOutbox(payload: Record<string, unknown>): Promise<WitusSendResult> {
-  const cfg = readConfig("OUTBOX_PODCAST");
-  if (!cfg) return stub("outbox.podcast", payload);
-  return postSigned(cfg, payload, "outbox.podcast");
+/** Send one draft to the WitUS Outbox on the given credential channel. Never throws. */
+export async function sendToOutbox(submission: OutboxSubmission, channel: OutboxChannel): Promise<WitusSendResult> {
+  const label = `outbox.${channel}`;
+  if (!outboxIngestSchema.safeParse(submission).success) {
+    console.error("[%s] refused: body fails the Outbox schema external_ref=%s", label, submission.external_ref);
+    return { ok: false, error: "invalid_submission" };
+  }
+  const cfg = readConfig(channel);
+  if (!cfg) {
+    console.log("[%s stub] no Outbox env; skipped platform=%s external_ref=%s", label, submission.platform, submission.external_ref);
+    return { ok: true, stubbed: true };
+  }
+  try {
+    const r = await canonicalSendToOutbox({
+      outboxUrl: cfg.url,
+      sourceSlug: cfg.sourceSlug,
+      hmacSecret: cfg.secret,
+      submission,
+    });
+    if (!r.ok) {
+      console.error(
+        "[%s] rejected source=%s platform=%s external_ref=%s status=%d",
+        label,
+        cfg.sourceSlug,
+        submission.platform,
+        submission.external_ref,
+        r.status
+      );
+      return { ok: false, status: r.status, error: "rejected" };
+    }
+    return { ok: true, status: r.status, id: r.id, recordStatus: r.recordStatus };
+  } catch (err) {
+    console.error("[%s] send failed err=%s", label, err instanceof Error ? err.name : "UnknownError");
+    return { ok: false, error: "network_error" };
+  }
 }

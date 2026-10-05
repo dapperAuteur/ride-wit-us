@@ -3,5 +3,6 @@ export * from "./users";
 export * from "./vehicles";
 export * from "./places";
 export * from "./vendors";
+export * from "./journeys";
 export * from "./trips";
 export * from "./waitlist";

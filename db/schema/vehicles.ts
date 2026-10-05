@@ -25,7 +25,11 @@ export const vehicleKind = pgEnum("vehicle_kind", [
   "shoes",
   "other",
 ]);
-export const vehicleOwnership = pgEnum("vehicle_ownership", ["owned", "rental", "borrowed"]);
+/**
+ * `shared` added in Phase 1a (a household or club vehicle). Rentals and borrowed vehicles carry no
+ * ownership cost (PRD §5.5).
+ */
+export const vehicleOwnership = pgEnum("vehicle_ownership", ["owned", "rental", "borrowed", "shared"]);
 export const vehicleEnergy = pgEnum("vehicle_energy", [
   "gasoline",
   "diesel",

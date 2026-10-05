@@ -14,15 +14,24 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { journeys, tripStatus } from "./journeys";
 import { places } from "./places";
 import { users } from "./users";
 import { vendorRefs } from "./vendors";
 import { tripMode, vehicles } from "./vehicles";
 
-export const tripStatus = pgEnum("trip_status", ["planned", "in_progress", "completed", "cancelled"]);
 /** CentenarianOS's existing travel vs fitness distinction (migration 053). */
 export const tripCategory = pgEnum("trip_category", ["travel", "fitness"]);
-export const tripPurpose = pgEnum("trip_purpose", ["commute", "leisure", "work", "errand", "exercise", "other"]);
+/** `personal` added in Phase 1a; `leisure` and `exercise` stay for CentenarianOS rows (Stage 4 migration). */
+export const tripPurpose = pgEnum("trip_purpose", [
+  "commute",
+  "leisure",
+  "work",
+  "errand",
+  "exercise",
+  "other",
+  "personal",
+]);
 export const assistLevel = pgEnum("assist_level", ["none", "low", "high"]);
 /** `device` and `manual` only: CentenarianOS computes estimates on receipt (PRD §7.2, §13 Q8). */
 export const caloriesSource = pgEnum("calories_source", ["device", "manual"]);
@@ -53,6 +62,12 @@ export const trips = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     vehicleId: uuid("vehicle_id").references(() => vehicles.id, { onDelete: "set null" }),
+    /**
+     * The multi-leg trip this leg belongs to, or null for a standalone trip. Ports CentenarianOS's
+     * `trips.route_id` + `leg_order` (trip_routes parent). Deleting the journey deletes its legs.
+     */
+    journeyId: uuid("journey_id").references(() => journeys.id, { onDelete: "cascade" }),
+    legOrder: integer("leg_order"),
     mode: tripMode("mode").notNull(),
     status: tripStatus("status").notNull().default("completed"),
     category: tripCategory("category").notNull().default("travel"),
@@ -64,6 +79,9 @@ export const trips = pgTable(
     endDate: date("end_date"),
     departedAt: timestamp("departed_at", { withTimezone: true }),
     arrivedAt: timestamp("arrived_at", { withTimezone: true }),
+    /** IANA zones the departure and arrival were entered in, so a flight shows local time at each end. */
+    departTz: text("depart_tz"),
+    arriveTz: text("arrive_tz"),
 
     originPlaceId: uuid("origin_place_id").references(() => places.id, { onDelete: "set null" }),
     destinationPlaceId: uuid("destination_place_id").references(() => places.id, { onDelete: "set null" }),
@@ -119,6 +137,7 @@ export const trips = pgTable(
   (t) => [
     index("trips_user_date_idx").on(t.userId, t.startDate),
     index("trips_vehicle_idx").on(t.vehicleId),
+    index("trips_journey_idx").on(t.journeyId),
     unique("trips_user_source_external_key").on(t.userId, t.source, t.externalId),
     check(
       "trips_cost_currency_paired",
@@ -131,6 +150,10 @@ export const trips = pgTable(
     check("trips_end_after_start", sql`${t.endDate} IS NULL OR ${t.endDate} >= ${t.startDate}`),
     check("trips_distance_nonnegative", sql`${t.distanceM} IS NULL OR ${t.distanceM} >= 0`),
     check("trips_assist_ebike_only", sql`${t.assistLevel} IS NULL OR ${t.mode} = 'ebike'`),
+    check(
+      "trips_arrive_after_depart",
+      sql`${t.arrivedAt} IS NULL OR ${t.departedAt} IS NULL OR ${t.arrivedAt} >= ${t.departedAt}`
+    ),
     check("trips_calories_source_paired", sql`(${t.caloriesKcal} IS NULL) = (${t.caloriesSource} IS NULL)`),
   ]
 );

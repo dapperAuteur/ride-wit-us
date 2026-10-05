@@ -8,6 +8,13 @@
       "when": 1791235854219,
       "tag": "0000_mobility_foundations",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791242409249,
+      "tag": "0001_mobility_vehicles_trips",
+      "breakpoints": true
     }
   ]
 }

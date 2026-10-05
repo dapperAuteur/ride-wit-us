@@ -66,6 +66,9 @@ export function PostHogProvider({
   useEffect(() => {
     if (!apiKey) return;
     if (posthog.__loaded) {
+      // posthog is an external singleton that may already be initialized (fast refresh, remount);
+      // syncing that fact into state once is the effect's job here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReady(true);
       return;
     }

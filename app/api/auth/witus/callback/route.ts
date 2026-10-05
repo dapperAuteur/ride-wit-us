@@ -16,13 +16,13 @@ import { withAttemptMarker, witusRedirectUri } from "@/lib/witus-sso";
 // learn exactly what one authenticated back-channel request returns. The tokens are used once here
 // and discarded; nothing about the IdP session is kept.
 //
-// THERE IS NO USER TABLE TO FIND-OR-CREATE AGAINST. The session is the claims, signed. A person who
-// has never visited before and one who visits daily produce identical work in this handler.
+// NO USER ROW IS WRITTEN HERE. The session is the claims, signed. The mobility app's `users` row
+// (keyed by witus_sub) is upserted on the first /app request (lib/mobility/context.ts), so this
+// handler keeps working on a deploy with no database.
 //
-// THERE IS ALSO NO ALLOW-LIST. Anyone with a WitUS account can sign in, which is the intended
-// behaviour for a public curriculum site — the session grants access to /signed-in and nothing
-// else today. When the CentenarianOS travel module lands and there is something worth authorizing,
-// that gate belongs on the resource, not here.
+// THERE IS ALSO NO ALLOW-LIST HERE. Anyone with a WitUS account can sign in. The gate is on the
+// resource: /app lets in the ADMIN_EMAIL owner and granted members, and shows everyone else the
+// waitlist (lib/mobility/access.ts).
 
 // Reads cookies, calls the IdP, writes a session cookie; never cached.
 export const runtime = "nodejs";
@@ -112,5 +112,5 @@ export async function GET(request: NextRequest) {
   });
 
   clearTransient();
-  return NextResponse.redirect(new URL("/signed-in", request.url));
+  return NextResponse.redirect(new URL("/app", request.url));
 }

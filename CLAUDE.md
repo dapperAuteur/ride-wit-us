@@ -1,11 +1,11 @@
 ## ⚠️ Ecosystem repo identity (don't confuse these)
 
-This repo (`ride-wit-us`) is **RideWitUS** — the podcast curriculum surface of the WitUS ecosystem. Its companion brand site is `gemini/witus` (the static `witus.online` umbrella). They are different repos for different concerns:
+This repo (`ride-wit-us`) is **RideWitUS** — the podcast curriculum surface of the WitUS ecosystem **and, since 2026-10-05, the mobility system of record** (trips, flights, lodging, vehicles, fuel, maintenance, cost; WitUS decision 1, 2026-08-27). It is **not a rideshare app**. Its companion brand site is `gemini/witus` (the static `witus.online` umbrella). They are different repos for different concerns:
 
 - **`gemini/witus`** = `witus.online`, the umbrella brand site (no DB, no auth, marketing-only).
 - **`gemini/ride-wit-us`** = RideWitUS, the podcast app + thin coordination surface for the FreeWheelin / Brompton bike-mechanic curriculum. Curriculum + lessons live natively in CentOS Academy and Wanderlearn — this app does **not** rebuild them.
 
-The dir was previously an activity tracker (walking/running/biking/driving). All of that was deleted on `feat/curriculum-podcast`. Do not resurrect Stripe, Prisma, JWT auth, or the dashboard — every feature already exists elsewhere in the ecosystem (rides → CentOS travel; auth → Supabase; payments → ecosystem path).
+The dir was previously an activity tracker (walking/running/biking/driving). All of that was deleted on `feat/curriculum-podcast`. Do not resurrect that code (Stripe, Prisma, its JWT auth). The **new** mobility module is a fresh build: Neon + Drizzle + pnpm per the shared stack doc, WitUS SSO only, signed-in under `/app`, specified in the local PRD `plans/future/PRD.md` and sequenced in `plans/02-ridewitus-build-plan.md`. Public podcast pages stay static and database-free; mobility routes fail closed without `DATABASE_URL`.
 
 ---
 

@@ -214,6 +214,30 @@ Status key: **E** = exists in CentenarianOS and is ported; **E+** = exists and i
 
 ---
 
+### 5.8 Trips to and from calendar activities (added 2026-10-05, owner request)
+
+The owner's day already lives in Google Calendar: work, workouts, appointments, classes. Most of the driving and
+riding is getting to and from those. RideWitUS should use them so trips don't have to be typed from memory.
+
+- **N** RideWitUS receives the owner's calendar activities from CentenarianOS (see §6.5a). It never connects to
+  Google itself: CentenarianOS already holds the Google connection, and a second OAuth connection would mean
+  two copies of the same tokens and two consent screens.
+- **N** **Suggested trips.** For each activity with a location, RideWitUS suggests the trip there and back:
+  the previous place (home, or the previous activity's location that day) → the activity → the next place.
+  Mode and vehicle come from the user's history for that place, else their default; distance from routing (OSRM,
+  as planned routes already use). Suggested trips sit in a **review list** and become real trips only when
+  the user confirms, edits, or marks "didn't go". Nothing is logged automatically.
+- **N** **Departure planning.** For upcoming activities, show "leave by" times by mode (bike vs car), and the
+  cost and active-minutes difference between them, which feeds the active-transport and cost-per-mile views.
+- **N** **Changes follow the calendar.** A moved event moves its unconfirmed suggestions; a cancelled event
+  removes them. Confirmed trips are never deleted by a calendar change: they are flagged for review instead,
+  the same rule CentenarianOS follows for financial records.
+- **N** **Places.** A small saved-places list (home, work, gym, a venue), matched against event locations so
+  "Blue Note" and "Blue Note Jazz Club, 131 W 3rd St" resolve to one place. The home location is set by the
+  user in RideWitUS and is never sent to CentenarianOS.
+- `#trip` title tokens still work (§5.1): a `#trip` event becomes a confirmed trip; an untagged event with a
+  location becomes a suggestion.
+
 ## 6. Integration with CentenarianOS
 
 This is the core of the PRD. Everything here is **Proposed** unless marked otherwise.
@@ -367,6 +391,41 @@ Receiver (proposed): `POST /api/events/finance-match` on RideWitUS, secret `FINA
 **Deliberately not sent:** budgets, account balances, savings envelopes. A vehicle or bike purchase envelope
 lives in CentenarianOS; RideWitUS links to it with a deep link at most. This keeps "each app one job" and
 keeps financial data out of RideWitUS. See open question 6.
+
+### 6.5a CentenarianOS → RideWitUS: calendar activity feed (added 2026-10-05)
+
+CentenarianOS owns the Google Calendar connection (plan 59 Part 4: one-way, read-only, several Google accounts,
+daily cron plus "Sync now"). It forwards the events RideWitUS needs for §5.8.
+
+| Event | When | Fields |
+|---|---|---|
+| `calendar.activity` | A synced event is created, changed, moved or cancelled, and passes the filters below | `event_id` (stable: hash of CentenarianOS `calendar_sync_items.id`), `starts_at`, `ends_at` (ISO with offset), `all_day`, `time_zone`, `title`, `location` (free text as typed in Google), `calendar_label` (the user's name for the calendar, not Google's id), `status` (`confirmed` / `cancelled`), `trip_token` (the parsed `#trip` data, if any), `is_active` |
+
+Receiver (proposed): `POST /api/events/calendar-activity` on RideWitUS, secret `CALENDAR_ACTIVITY_EVENTS_SECRET`,
+same `X-Witus-*` signing, same identity mapping (§6.3) and upsert on `(user_id, event_id)`.
+
+**Privacy filters, all in CentenarianOS before anything is sent:**
+
+- **Opt-in per calendar.** Each synced calendar gets a "Share with RideWitUS" switch, off by default. The
+  personal calendar and the work calendar can be treated differently.
+- **Location required.** Only events with a location are sent; an event with no place has nothing to travel to.
+  All-day events are skipped unless they have a location.
+- **Minimum fields.** No description, attendees, meeting links, or Google ids. Title is sent because it
+  names the trip; a per-calendar "hide titles" option sends `"Event"` instead.
+- **Window.** The past 14 days (for logging trips already taken) and the next 30 days (for planning).
+- **Stop sharing.** Turning the switch off sends `is_active: false` for that calendar's events, and RideWitUS
+  deletes the unconfirmed suggestions built from them. Confirmed trips stay (they are the user's travel record).
+
+**CentenarianOS changes this needs** (a CentenarianOS branch, not this repo):
+
+1. Store `starts_at`, `ends_at`, `all_day` and `location` on `calendar_sync_items` (additive columns). Today the
+   location only lands inside the planner task's description text and the end time is not kept.
+2. The per-calendar share switch (and hide-titles option) on `calendar_sync_calendars`, in settings.
+3. An outbox emitter in the sync engine, plus a backfill script for events synced before the switch.
+
+**Why a push, not RideWitUS reading CentenarianOS:** it matches every other cross-app flow (signed events, local
+projections), keeps RideWitUS working when CentenarianOS is down, and lets CentenarianOS enforce the filters in
+one place.
 
 ### 6.6 Work.WitUS (contract only)
 
@@ -538,7 +597,7 @@ service.
 |---|---|---|
 | **0. Foundations** | Owner approves this PRD; resolve identity wording (open question 1); provision WitUS SSO (task 05); provision Neon; add Drizzle and a `users` table keyed by `witus_sub`; update this repo's CLAUDE.md and ARCHITECTURE.md, which still say "no database" and "isn't a ride tracker" | Signed-in user can reach an empty mobility dashboard |
 | **1. MVP (standalone)** | Vehicles, manual trips, fuel logs, maintenance, components, service intervals with defaults, true cost per mile with depreciation, active-transport stats, multi-currency costs, Garmin CSV import, CSV export | Owner can run his own mobility from RideWitUS for a month |
-| **2. Integration** | RideWitUS outbox and emitters; CentenarianOS receivers and projections with legacy fallback; CentenarianOS weekly review, retrospective, AI coach, and correlations read projections; plan 60 Phase C/B read forecast items; `cost.matched` back-channel; resync script | A RideWitUS trip and service forecast show up in CentenarianOS |
+| **2. Integration** | RideWitUS outbox and emitters; CentenarianOS receivers and projections with legacy fallback; CentenarianOS weekly review, retrospective, AI coach, and correlations read projections; plan 60 Phase C/B read forecast items; `cost.matched` back-channel; calendar activity feed and suggested trips (§5.8, §6.5a); resync script | A RideWitUS trip and service forecast show up in CentenarianOS |
 | **3. Stage 4 migration** | Copy CentenarianOS travel data; cut over UI and calendar tokens; deprecate tables; Work.WitUS mileage move and read-back API | CentenarianOS travel = summary widget; no writes to old tables |
 | **4. Later** | Garmin or Strava API sync, GPX/FIT upload, e-car charging detail, insurance and registration forecasts, Stage 6 table drops | As prioritized |
 
@@ -557,12 +616,15 @@ service.
    itineraries elsewhere?
 4. **Units.** Keep miles (as CentenarianOS does) or store meters and display by user preference?
 5. **Multi-currency.** Which app owns exchange rates and which rate source? Recommendation: RideWitUS stores
-   the original amount and currency; CentenarianOS converts. Is the multi-currency cash-account work in
-   CentenarianOS planned anywhere yet? No plan was found.
+   the original amount and currency; CentenarianOS converts. *Update 2026-10-05:* CentenarianOS is building
+   multi-currency cash accounts with daily exchange rates (Frankfurter/ECB first, open.er-api.com fallback,
+   manual rates win), so CentenarianOS owns exchange rates.
 6. **Back-channel.** Is `cost.matched` enough, or do you want RideWitUS to show a vehicle's savings-envelope
    progress (which would mean CentenarianOS sends balances)?
-7. **Calendar tokens after cutover.** Should `#trip` calendar entries be created in RideWitUS (CentenarianOS
-   calls its API) or should RideWitUS read the calendar itself?
+7. **Calendar tokens after cutover.** *Answered 2026-10-05:* RideWitUS uses the calendar data CentenarianOS
+   already syncs, through the activity feed in §6.5a; it does not connect to Google itself. Still open: the
+   default for new calendars (recommended: sharing off), and whether titles are sent by default (recommended: yes,
+   with a per-calendar hide option).
 8. **Calorie estimates.** Should CentenarianOS compute them on receipt (it has your weight), or should you
    enter weight in RideWitUS?
 9. **Default service intervals.** Who supplies the default table: you, a cited manufacturer-neutral source,
@@ -588,6 +650,8 @@ service.
 | Database reversal of a static site | Build failures on unprovisioned deploys; health check semantics change | Keep public pages static and DB-free; mobility routes fail closed; extend `/api/health` with a DB presence flag only |
 | Two apps' travel at once (Work.WitUS) | Double-counted business miles | Migrate Work.WitUS mileage in its own phase with a dedup report |
 | Privacy | Location data in errors or events | Events carry no coordinates; existing `lib/sentry-scrub.ts` already redacts lat/lng and addresses |
+| Calendar data in a second app | Event titles and places (doctor, therapy, a home address) become visible in RideWitUS | Opt-in per calendar, off by default; location-only events; no descriptions or attendees; hide-titles option; stop-sharing removes unconfirmed suggestions (§6.5a) |
+| Wrong trip suggestions | Trips logged that never happened, inflating miles and active minutes | Suggestions are never logged until confirmed; "didn't go" is one tap |
 
 ---
 

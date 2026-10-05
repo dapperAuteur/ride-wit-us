@@ -36,7 +36,7 @@ export default async function SignInPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   // Already signed in? There is nothing to do on this page.
-  if (await getCurrentUser()) redirect("/signed-in");
+  if (await getCurrentUser()) redirect("/app");
 
   const { error } = await searchParams;
   const message = error ? (ERROR_COPY[error] ?? "That sign-in didn't finish. Start again below.") : null;

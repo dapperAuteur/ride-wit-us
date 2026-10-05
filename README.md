@@ -120,6 +120,21 @@ body.
 
 ---
 
+## Integration with CentenarianOS
+
+**Today:** none at the data level. RideWitUS has no database and no trip, vehicle, or fuel code; trips,
+vehicles, fuel, and maintenance still live in CentenarianOS's travel module. The only shared pieces are
+"Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
+
+**Proposed (decided 2026-08-27, not built):** RideWitUS grows a database and becomes the system of record
+for trips, rides, vehicles, fuel, maintenance, components, and cost per mile, taking over CentenarianOS's
+travel module (decomposition Stage 4). RideWitUS pushes signed summaries (trip activity, planned-trip
+budgets, dated maintenance and fuel forecasts, per-vehicle cost and depreciation, costs to match with
+transactions) to CentenarianOS, which keeps local copies for its correlations, weekly review, budgets, and
+expense forecast. Full requirements, the event contract, and the migration plan: [PRD.md](./PRD.md).
+
+---
+
 ## Ecosystem siblings
 
 - [WitUS.online](https://witus.online) — umbrella brand site (this repo's parent)
@@ -134,6 +149,7 @@ body.
 
 ## Documentation
 
+- [PRD.md](./PRD.md) — product requirements for the mobility module and the CentenarianOS integration (draft)
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — tech stack, data flow, routing map, env vars
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — branch hygiene, commit style, dev workflow
 - [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — community expectations

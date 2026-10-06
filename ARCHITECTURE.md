@@ -184,8 +184,8 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `WITUS_SESSION_SECRET` | For sign-in | — | HMAC key for this app's session cookie. Not shared with any other app; rotating it signs everyone out |
 | `WITUS_OIDC_ISSUER` | No | `https://accounts.witus.online/api/idp` | One value; all four OIDC endpoints and the session-probe origin derive from it |
 | `NEXT_PUBLIC_SITE_URL` | No | request host | Canonical origin for the `redirect_uri` and `post_logout_redirect_uri`. Both derive from the same value so they cannot disagree |
-| `DATABASE_URL` | For mobility | — | Pooled Neon connection string. Unset ⇒ `/app` shows "not switched on", `/api/waitlist` returns 503, the build still passes |
-| `DATABASE_URL_UNPOOLED` | Migrations only | — | Direct Neon URL for `pnpm db:migrate:prod`, exported in BAM's shell, never committed |
+| `DATABASE_URL` (or `STORAGE_DATABASE_URL`) | For mobility | — | Pooled Neon connection string. Unset ⇒ `/app` shows "not switched on", `/api/waitlist` returns 503, the build still passes |
+| `DATABASE_URL_UNPOOLED` (or `STORAGE_DATABASE_URL_UNPOOLED`) | Migrations only | — | Direct Neon URL for `pnpm db:migrate:prod`, exported in BAM's shell, never committed |
 | `RATE_LIMIT_SALT` | Recommended | — | HMAC key for rate-limit bucket keys so stored keys cannot be reversed to IPs |
 | `SENTRY_DSN` | No | — | Better Stack ingest DSN for server + edge errors. Unset ⇒ the SDK never initializes |
 | `NEXT_PUBLIC_SENTRY_DSN` | No | — | Same source, browser side. Inlined at build time |

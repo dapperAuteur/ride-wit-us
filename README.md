@@ -72,7 +72,6 @@ lib/
   witus-sso.ts          SSO helpers: probe, loop guard, derived IdP URLs (pure, tested)
   witus-sso-config.ts   the half of the above that reads env and request headers
   curriculum/           episodes + seasons + apron palette (single source of truth)
-  community-events.ts   shared "Next ride / Open shop" data
   mailgun.ts            Mailgun HTTP-API client (mg.witus.online)
   products.ts           canonical sibling-product list (mirrors gemini/witus/lib/products.ts)
   site-meta.ts          SITE_URL, APP_NAME, APP_DESCRIPTION

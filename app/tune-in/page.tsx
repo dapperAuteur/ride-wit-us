@@ -2,7 +2,6 @@ import Link from "next/link";
 import { SiteHeader, HEADER_THEMES } from "@/components/site-header";
 import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { NotifyMeForm } from "@/components/notify-me-form";
-import { COMMUNITY_EVENTS } from "@/lib/community-events";
 import { EPISODES } from "@/lib/curriculum/episodes";
 import { APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
 
@@ -84,7 +83,7 @@ export default function TuneInPage() {
               <span className="block">Show up.</span>
             </h1>
             <p className="mt-8 max-w-xl text-lg text-[#221E1B] leading-relaxed">
-              Tell us which episodes you want a heads-up on. Continue across the ecosystem when you want more. Show up at the open shop on a Wednesday.
+              Tell us which episodes you want a heads-up on. Continue across the ecosystem when you want more.
             </p>
           </div>
         </section>
@@ -144,22 +143,6 @@ export default function TuneInPage() {
                   </Link>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-t-4 border-dashed border-[#221E1B]">
-          <div className="max-w-5xl mx-auto px-6 py-16">
-            <h2 className="font-display text-4xl text-[#221E1B] mb-2">Show up in person.</h2>
-            <p className="text-[#5b4d2c] mb-8 max-w-2xl">The podcast is half the school. The other half is the bench, the trail, and the people you&apos;ll meet there.</p>
-            <div className="grid sm:grid-cols-2 gap-6">
-              {COMMUNITY_EVENTS.map((e) => (
-                <div key={e.kind} className="border-2 border-[#221E1B] p-6 bg-[#fff8e8]" style={{ boxShadow: `6px 6px 0 ${e.color}` }}>
-                  <p className="font-mono text-[11px] uppercase tracking-wider mb-1" style={{ color: e.color }}>{e.eyebrow}</p>
-                  <p className="font-display text-2xl font-bold text-[#221E1B]">{e.title}</p>
-                  <p className="text-sm text-[#221E1B]/80 mt-2">{e.body}</p>
-                </div>
-              ))}
             </div>
           </div>
         </section>

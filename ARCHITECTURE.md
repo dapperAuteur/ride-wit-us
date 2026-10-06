@@ -40,7 +40,7 @@
 - Each episode page has CTAs to its companion class (CentOS Academy lesson), flashcard deck (FlashLearnAI set), and ride route tour (Wanderlearn) when applicable.
 - The `/tune-in` ecosystem-siblings card grid links into Academy, FlashLearn, Wanderlearn, CentOS Travel, witus.online, and AwesomeWebStore.
 
-**Phase 4 integration (deferred):** signed-HMAC forward from `/api/inbox-ingest` to [witus-inbox](https://github.com/dapperAuteur/witus-inbox) so submissions also land in the cross-product triage queue. Pattern matches `claude/witus-inbox/examples/sender.ts`.
+**WitUS Inbox and Outbox:** see [§ WitUS Inbox and Outbox](#witus-inbox-and-outbox). Every form and waitlist signup is forwarded to [witus-inbox](https://github.com/dapperAuteur/witus-inbox) so it lands in the cross-product triage queue, and `/api/outbox/publish` drafts social posts in [witus-outbox](https://github.com/dapperAuteur/witus-outbox).
 
 ---
 
@@ -77,6 +77,7 @@ User                       Next.js                          Mailgun
  │                           │ { id }                         │
  │ { ok, mail: {count} }     │                                │
  │◄──────────────────────────┤                                │
+ │                           │ after(): sendToInbox(...)  ──► WitUS Inbox
 ```
 
 Three form types currently:
@@ -85,6 +86,23 @@ Three form types currently:
 - `general_contact` — generic; not yet exposed in UI.
 
 When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true }` and logs the would-be message to stdout. Form UX continues without provisioning.
+
+After the response, the validated form is forwarded to the WitUS Inbox (see below). An Inbox outage never fails the form.
+
+### WitUS Inbox and Outbox
+
+Both receivers verify the same signed webhook (`X-Witus-Source`, `X-Witus-Timestamp`, `X-Witus-Signature: sha256=<HMAC-SHA256(secret, "${timestamp}.${rawBody}")>`, 5-minute window) and then validate the body with zod, answering 400 to anything else.
+
+- **Signing** is done by the receivers' own reference senders, copied byte for byte and not edited: [`lib/sender-inbox.ts`](./lib/sender-inbox.ts) (from `witus-inbox/examples/sender.ts`) and [`lib/sender-outbox.ts`](./lib/sender-outbox.ts) (from `witus-outbox/examples/sender.ts`). Re-copy them when the receivers change.
+- **[`lib/witus-sender.ts`](./lib/witus-sender.ts)** wraps them: reads the credential triple from env (missing ⇒ stub, nothing sent), checks the body against copies of the receivers' schemas in [`lib/witus-contracts.ts`](./lib/witus-contracts.ts) before sending, never throws, and logs only metadata (channel, `form_type` or platform + `external_ref`, HTTP status).
+- **Inbox body** (`{ form_type, submitter_email?, submitter_name?, priority, payload }`): built by [`lib/inbox-forms.ts`](./lib/inbox-forms.ts) for the three podcast forms and by `lib/waitlist/validate.ts` for `ride_waitlist_signup`. All form fields go inside `payload`; `submitter_email` is sent only when it passes the Inbox's email rule.
+- **Outbox drafts** (`POST /api/outbox/publish`): admin session or `Authorization: Bearer $OUTBOX_PUBLISH_TOKEN`, and only while `OUTBOX_TRIGGER_ENABLED=true` (503 otherwise). [`lib/outbox-posts.ts`](./lib/outbox-posts.ts) turns `{ kind: "episode_published", slug }`, `{ kind: "season_complete", season }`, or `{ kind: "ad_hoc", ref, title, summary, url }` into one `as_draft: true` post per platform (default LinkedIn, X, Bluesky), with a stable `external_ref` such as `rwu-episode-brakes-linkedin` so a re-fire is idempotent. Episode and season text comes from the curriculum. Episodes and seasons use the podcast credential pair; ad hoc posts use the general pair. Nothing goes live until BAM promotes the draft in the Outbox.
+
+```sh
+curl -X POST https://ridewitus.witus.online/api/outbox/publish \
+  -H "Authorization: Bearer $OUTBOX_PUBLISH_TOKEN" -H "content-type: application/json" \
+  -d '{"kind":"episode_published","slug":"brakes"}'
+```
 
 ---
 
@@ -100,8 +118,8 @@ When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true
 /waitlist                       public mobility waitlist (static)
 /api/waitlist                   POST waitlist signup (dynamic; 503 without DATABASE_URL)
 /api/health                     GET + HEAD uptime probe (dynamic, no-store)
-/api/inbox-ingest               POST endpoint (dynamic)
-/api/outbox/publish             POST endpoint (dynamic)
+/api/inbox-ingest               POST podcast forms: Mailgun email + Inbox forward (dynamic)
+/api/outbox/publish             POST Outbox drafts; admin or bearer token, kill-switch gated (dynamic)
 /manifest.webmanifest           PWA manifest
 
 # Authentication — see § Authentication. All dynamic, all noindex.
@@ -109,6 +127,13 @@ When `MAILGUN_API_KEY` is unset, `sendMail()` returns `{ ok: true, stubbed: true
 /signed-in                      protected; proves the loop end to end. Superseded by /app as the post-sign-in landing
 /app                            mobility dashboard (signed in; owner or member; gate otherwise)
 /app/settings                   default units, home currency, time zone
+/app/vehicles                   vehicles in use and retired; /new, /[id] edit + delete
+/app/trips                      trips and multi-leg trips, filter planned/done, per-currency subtotals
+/app/trips/new                  log a trip; ?journey=<id> adds a leg to a multi-leg trip
+/app/trips/[id]                 edit or delete a trip or leg
+/app/journeys/new               plan a multi-leg trip
+/app/journeys/[id]              itinerary (legs + stays in order); /edit; /stays/new; /stays/[stayId]
+/app/places                     saved places with aliases; /new, /[id] edit + delete
 /api/auth/witus/authorize       GET  starts the OIDC code flow (state + PKCE)
 /api/auth/witus/callback        GET  finishes it and mints the session cookie
 /api/auth/signout               POST destroys the local session (303 to /, or 200 JSON)
@@ -146,12 +171,14 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `BAM_NOTIFY_EMAIL` | No | `bam@awews.com` | Where form-submission alerts land |
 | `INBOX_INGEST_URL` | Production | — | WitUS Inbox HMAC ingest endpoint |
 | `INBOX_INGEST_SECRET` | Production | — | HMAC-SHA256 signing key for Inbox |
-| `INBOX_SOURCE_SLUG` | Production | — | This app's source identity (e.g., `ridewitus`) |
+| `INBOX_SOURCE_SLUG` | Production | — | This app's source identity. Must match the slug in the Inbox's `INGEST_SOURCES` exactly (unknown slug ⇒ 401) |
 | `OUTBOX_INGEST_URL` | Production | — | WitUS Outbox HMAC ingest endpoint |
-| `OUTBOX_INGEST_SECRET` | Production | — | HMAC-SHA256 signing key for general posts |
-| `OUTBOX_SOURCE_SLUG` | Production | — | Source identity for generic Outbox posts |
+| `OUTBOX_INGEST_SECRET` | Production | — | HMAC-SHA256 signing key for general (ad hoc) posts |
+| `OUTBOX_SOURCE_SLUG` | Production | — | Source identity for general Outbox posts; must match the Outbox's `INGEST_SOURCES` |
 | `OUTBOX_PODCAST_RWU_SECRET` | Production | — | Separate secret for podcast publish channel (so it can be rotated independently) |
 | `OUTBOX_PODCAST_RWU_SLUG` | Production | — | Source identity for podcast Outbox posts |
+| `OUTBOX_TRIGGER_ENABLED` | To post | unset (off) | Kill-switch. Only the exact value `true` lets `/api/outbox/publish` send |
+| `OUTBOX_PUBLISH_TOKEN` | No | — | Bearer token for calling `/api/outbox/publish` from a script. Unset ⇒ admin session only |
 | `WITUS_OIDC_CLIENT_ID` | For sign-in | — | `witus-ride`, fixed by the IdP registry. All three of these must be set together or sign-in stays dark |
 | `WITUS_OIDC_CLIENT_SECRET` | For sign-in | — | Issued on the IdP as `WITUS_OIDC_SECRET__RIDE` |
 | `WITUS_SESSION_SECRET` | For sign-in | — | HMAC key for this app's session cookie. Not shared with any other app; rotating it signs everyone out |
@@ -330,8 +357,46 @@ stack (Neon + Drizzle + pnpm).
   everyone else is waitlisted (`lib/mobility/access.ts`).
 - **Waitlist:** `POST /api/waitlist` stores the signup and, once per address, notifies BAM through
   `sendToInbox` with WitUS Inbox's documented shape (`form_type: ride_waitlist_signup`, `submitter_email`,
-  `payload`).
+  `payload`). A **new** signup (not a repeat; the upsert's `RETURNING (xmax = 0)`) also gets one
+  plain-text confirmation email after the response (`lib/waitlist/confirmation.ts`): what happens next and
+  "reply to be removed". No HTML, Mailgun open/click tracking off. `confirmation_sent_at` is set only when
+  Mailgun accepts it; without `MAILGUN_API_KEY` the send is skipped and logged and the signup still succeeds.
 - **Migrations:** `pnpm db:generate` needs no database. BAM applies them with `pnpm db:migrate:prod`.
+  `0001_waitlist_confirmation_sent_at` adds `waitlist_entries.confirmation_sent_at`;
+  `0002_mobility_vehicles_trips` (Phase 1a) adds `journeys`, `lodging_stays`, trip leg columns
+  (`journey_id`, `leg_order`, `depart_tz`, `arrive_tz`), and the `shared` ownership and `personal` purpose
+  values. Additive only.
+
+### Vehicles, trips, places (Phase 1a)
+
+Screens under `/app`, all server components with server actions (`app/app/*/actions.ts`); the forms are
+small client components built from `components/mobility/form-kit.tsx`.
+
+- **Vehicles** (`/app/vehicles`): every kind, ownership owned / rented / borrowed / shared, purchase price
+  with its currency, starting odometer and expected life entered in the page's units and stored as meters,
+  in use or retired. Distance logged on trips is summed per vehicle (round trips twice).
+- **Trips** (`/app/trips`): any mode, optional vehicle, saved-place or typed ends, round trip (distance
+  stored one way, counted twice in totals), duration, purpose, status (planned / in progress / done /
+  cancelled), cost with its currency. Departure and arrival are entered as local clock time plus an IANA
+  zone (`lib/mobility/zoned-time.ts`) and stored as an instant plus the zone, so a flight shows each end in
+  its own zone. Booking fields (carrier, flight number, confirmation as typed, seat, terminal, gate, link)
+  appear for booked modes. The list filters planned and done and shows per-currency subtotals.
+- **Multi-leg trips** (`journeys`, `/app/journeys/[id]`): a named trip grouping legs (`trips.journey_id`,
+  ports CentenarianOS `trip_routes` + `route_id`) and lodging stays (`lodging_stays`: check-in / check-out,
+  place, confirmation, cost with its currency). The itinerary orders legs and stays by local date, legs
+  before the day's check-in. Deleting a journey deletes its legs and stays.
+- **Places** (`/app/places`): saved places with aliases. Names are compared case- and punctuation-blind; a
+  place that would answer to another place's name is refused. A typed trip end that matches a label or
+  alias links to that place. The home place never leaves RideWitUS: any future emitter must pass places
+  through `shareablePlace()` in `lib/mobility/places.ts`, which returns null for home.
+- **Ownership:** every read filters on `user_id`; every update and delete matches `id` **and** `user_id`;
+  every foreign id a form submits (vehicle, origin and destination place, journey, stay place) is checked
+  by `verifyOwnedRefs()` (`lib/mobility/ownership.ts`) against the signed-in owner before the write. Ids
+  in URLs are format-checked first so a hand-typed URL is a 404, not a database error.
+- **Money:** each amount keeps its currency; totals are one subtotal per currency
+  (`lib/mobility/money.ts`, integer cents), labelled "not converted" when there is more than one.
+- **CO2:** ported from CentenarianOS `CO2_PER_MILE` onto meters; modes CentenarianOS has no factor for
+  (e-bike, scooter, motorcycle, taxi) get no estimate rather than a guessed one.
 
 ---
 
@@ -370,7 +435,7 @@ monitors. It is a **liveness probe**, not a delivery check.
 
 ## Build + deploy
 
-- `pnpm build` produces a static-first build with these dynamic routes: `/api/health`, `/api/inbox-ingest`, `/api/outbox/publish`, `/api/waitlist`, the five authentication routes (`/signin`, `/signed-in`, `/api/auth/witus/authorize`, `/api/auth/witus/callback`, `/api/auth/signout`), and the mobility app (`/app`, `/app/settings`). It passes with no database env.
+- `pnpm build` produces a static-first build with these dynamic routes: `/api/health`, `/api/inbox-ingest`, `/api/outbox/publish`, `/api/waitlist`, the five authentication routes (`/signin`, `/signed-in`, `/api/auth/witus/authorize`, `/api/auth/witus/callback`, `/api/auth/signout`), and the mobility app (`/app` and everything under it: settings, vehicles, trips, journeys, places). It passes with no database env.
 - All 38+ public pages are statically prerendered via `generateStaticParams()`.
 - Deploy via Vercel (the ecosystem default). The branch policy in [CONTRIBUTING.md](./CONTRIBUTING.md) requires BAM to merge to `main` via the GitHub UI; Vercel auto-deploys main → production and branches → preview.
 

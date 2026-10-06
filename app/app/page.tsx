@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { and, count, eq, gte, lt, sum } from "drizzle-orm";
+import { and, count, eq, gte, lt, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { trips, vehicles } from "@/db/schema";
 import { MobilityGate } from "@/components/mobility/mobility-gate";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/mobility/styles";
 import { Measurement } from "@/components/units/measurement";
 import { UnitsProvider } from "@/components/units/units-provider";
 import { UnitsToggle } from "@/components/units/units-toggle";
@@ -17,7 +18,11 @@ async function loadSummary(userId: string, timeZone: string | null) {
   const [[v], [t]] = await Promise.all([
     db.select({ n: count() }).from(vehicles).where(and(eq(vehicles.userId, userId), eq(vehicles.isActive, true))),
     db
-      .select({ n: count(), meters: sum(trips.distanceM) })
+      // A round trip is stored one way and counts twice (lib/mobility/grouping.ts effectiveDistanceM).
+      .select({
+        n: count(),
+        meters: sql<string | null>`sum(case when ${trips.isRoundTrip} then ${trips.distanceM} * 2 else ${trips.distanceM} end)`,
+      })
       .from(trips)
       .where(
         and(
@@ -70,17 +75,26 @@ export default async function MobilityDashboardPage() {
           ))}
         </dl>
 
+        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <Link href="/app/trips/new" className={BTN_PRIMARY}>
+            Log a trip
+          </Link>
+          <Link href="/app/journeys/new" className={BTN_SECONDARY}>
+            Plan a multi-leg trip
+          </Link>
+          <Link href="/app/vehicles/new" className={BTN_SECONDARY}>
+            Add a vehicle
+          </Link>
+        </div>
+
         {summary.tripsThisMonth === 0 && summary.vehicles === 0 ? (
           <div className="mt-10 border-2 border-dashed border-[#221E1B] bg-[#fff8e8] p-6 max-w-2xl">
             <h2 className="font-display text-2xl text-[#221E1B]">Nothing logged yet</h2>
             <p className="mt-2 text-[#221E1B] leading-relaxed">
-              Vehicles, trips, fuel, and maintenance arrive in the next release. For now, pick your units and
-              currency so everything after this shows up the way you read it.
+              Start with your units and currency so every distance and cost shows up the way you read it. Then add
+              the vehicles you use, save a few places (home stays private), and log a trip.
             </p>
-            <Link
-              href="/app/settings"
-              className="mt-4 inline-flex items-center justify-center min-h-12 px-5 border-2 border-[#221E1B] bg-[#F4B44A] text-[#221E1B] font-semibold rounded-lg focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#221E1B]"
-            >
+            <Link href="/app/settings" className={`mt-4 ${BTN_PRIMARY}`}>
               {ctx.hasSavedSettings ? "Review settings" : "Set your units"}
             </Link>
           </div>

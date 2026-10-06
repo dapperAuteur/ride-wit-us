@@ -20,6 +20,8 @@ export interface MailgunMessage {
   text: string;
   html?: string;
   replyTo?: string;
+  /** Turn off Mailgun's open and click tracking for this message (no pixel, no rewritten links). */
+  noTracking?: boolean;
 }
 
 export interface MailgunResult {
@@ -40,6 +42,11 @@ function getConfig() {
   const from = process.env.EMAIL_FROM ?? `RideWitUS <noreply@${domain}>`;
   const bamNotifyEmail = process.env.BAM_NOTIFY_EMAIL ?? "bam@awews.com";
   return { apiKey, domain, baseUrl, from, bamNotifyEmail };
+}
+
+/** True when a Mailgun API key is set, i.e. `sendMail()` will really send rather than stub. */
+export function mailConfigured(): boolean {
+  return !!process.env.MAILGUN_API_KEY;
 }
 
 export async function sendMail(message: MailgunMessage): Promise<MailgunResult> {
@@ -67,6 +74,11 @@ export async function sendMail(message: MailgunMessage): Promise<MailgunResult> 
   body.set("text", message.text);
   if (message.html) body.set("html", message.html);
   if (message.replyTo) body.set("h:Reply-To", message.replyTo);
+  if (message.noTracking) {
+    body.set("o:tracking", "no");
+    body.set("o:tracking-clicks", "no");
+    body.set("o:tracking-opens", "no");
+  }
 
   try {
     const res = await fetch(url, {

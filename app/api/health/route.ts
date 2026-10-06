@@ -77,7 +77,7 @@ export async function GET() {
           ),
           // Mobility database (PRD §14): presence only. The probe never connects, so a Neon
           // outage cannot turn this monitor red while the public site serves normally.
-          database: isConfigured("DATABASE_URL"),
+          database: isConfigured("DATABASE_URL") || isConfigured("STORAGE_DATABASE_URL"),
         },
         time: new Date().toISOString(),
       },

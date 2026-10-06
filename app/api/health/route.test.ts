@@ -16,6 +16,7 @@ const SECRET_VARS = [
   "WITUS_OIDC_CLIENT_SECRET",
   "WITUS_SESSION_SECRET",
   "DATABASE_URL",
+  "STORAGE_DATABASE_URL",
 ] as const;
 
 const saved = new Map<string, string | undefined>();
@@ -60,6 +61,13 @@ describe("GET /api/health", () => {
     const res = await GET();
     const text = JSON.stringify(await res.json());
     expect(text).not.toContain("unit-test-value-do-not-leak");
+  });
+
+  it("counts the Neon integration's STORAGE_DATABASE_URL as a configured database", async () => {
+    for (const name of SECRET_VARS) setEnv(name, undefined);
+    setEnv("STORAGE_DATABASE_URL", "unit-test-value-do-not-leak");
+    const body = await (await GET()).json();
+    expect(body.config.database).toBe(true);
   });
 
   it("reports false rather than throwing when credentials are absent", async () => {

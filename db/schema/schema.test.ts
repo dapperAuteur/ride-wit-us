@@ -1,7 +1,7 @@
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { UNIT_SYSTEMS } from "@/lib/units/convert";
-import { databaseConfigured, databaseUrl } from "@/lib/db/config";
+import { databaseConfigured, databaseUrl, migrationDatabaseUrl } from "@/lib/db/config";
 import { trips, unitSystem, users, vendorRefs } from "./index";
 
 describe("schema", () => {
@@ -42,5 +42,21 @@ describe("database config", () => {
     const url = "postgresql://u:p@host.example/db?sslmode=require";
     expect(databaseUrl({ DATABASE_URL: url })).toBe(url);
     expect(databaseConfigured({ DATABASE_URL: "postgres://u:p@h/db" })).toBe(true);
+  });
+
+  it("reads the Neon integration's STORAGE_ names, preferring the unprefixed ones", () => {
+    const a = "postgres://u:p@a/db";
+    const b = "postgres://u:p@b/db";
+    expect(databaseUrl({ STORAGE_DATABASE_URL: b })).toBe(b);
+    expect(databaseUrl({ DATABASE_URL: a, STORAGE_DATABASE_URL: b })).toBe(a);
+  });
+
+  it("picks the unpooled URL for migrations, then falls back to the pooled one", () => {
+    const pooled = "postgres://u:p@pooled/db";
+    const direct = "postgres://u:p@direct/db";
+    expect(migrationDatabaseUrl({ STORAGE_DATABASE_URL_UNPOOLED: direct, STORAGE_DATABASE_URL: pooled })).toBe(direct);
+    expect(migrationDatabaseUrl({ DATABASE_URL_UNPOOLED: direct })).toBe(direct);
+    expect(migrationDatabaseUrl({ STORAGE_DATABASE_URL: pooled })).toBe(pooled);
+    expect(migrationDatabaseUrl({})).toBeNull();
   });
 });

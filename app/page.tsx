@@ -3,7 +3,6 @@ import { SiteHeader, HEADER_THEMES } from "@/components/site-header";
 import { SiteFooter, FOOTER_THEMES } from "@/components/site-footer";
 import { SEASONS, APRON_COLORS, APRON_LABELS } from "@/lib/curriculum/season-colors";
 import { EPISODES } from "@/lib/curriculum/episodes";
-import { COMMUNITY_EVENTS } from "@/lib/community-events";
 
 const STICKER_COLORS = ["#F4B44A", "#D33E2D", "#5C8AA5", "#3E7C3A"];
 
@@ -24,7 +23,6 @@ export default function HomePage() {
           <div className="max-w-5xl mx-auto px-6 py-16">
             <div className="flex items-start gap-4 mb-4">
               <span className="sticker px-3 py-1 text-xs uppercase tracking-wider rotate-[-2deg]">Indianapolis</span>
-              <span className="sticker px-3 py-1 text-xs uppercase tracking-wider rotate-[1.5deg]" style={{ background: "#5C8AA5", color: "#f4ecd8" }}>Open shop · Wednesdays</span>
             </div>
             <h1 className="font-display text-6xl sm:text-8xl tracking-tight text-[#221E1B] leading-[0.9]">
               <span className="block">Community</span>
@@ -32,7 +30,7 @@ export default function HomePage() {
               <span className="block">for the rest of us.</span>
             </h1>
             <p className="mt-8 max-w-xl text-lg text-[#221E1B] leading-relaxed">
-              Thirty-two episodes about the bikes we ride, the neighbors we ride with, and the long arc of staying upright. Monthly community rides. An open shop you can roll into on a Wednesday.
+              Thirty-two episodes about the bikes we ride, the neighbors we ride with, and the long arc of staying upright.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -48,19 +46,6 @@ export default function HomePage() {
                 Browse episodes
               </Link>
             </div>
-          </div>
-        </section>
-
-        {/* Next ride / open shop */}
-        <section>
-          <div className="max-w-5xl mx-auto px-6 py-12 grid sm:grid-cols-2 gap-6">
-            {COMMUNITY_EVENTS.map((e) => (
-              <div key={e.kind} className="border-2 border-[#221E1B] p-6 bg-[#fff8e8]" style={{ boxShadow: `6px 6px 0 ${e.color}` }}>
-                <p className="font-mono text-[11px] uppercase tracking-wider mb-1" style={{ color: e.color }}>{e.eyebrow}</p>
-                <p className="font-display text-2xl font-bold text-[#221E1B]">{e.title}</p>
-                <p className="text-sm text-[#221E1B]/80 mt-2">{e.body}</p>
-              </div>
-            ))}
           </div>
         </section>
 

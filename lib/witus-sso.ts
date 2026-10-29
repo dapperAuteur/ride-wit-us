@@ -13,9 +13,11 @@
  *     anyway, and in parallel the browser asks the IdP "who is this?". If an answer arrives, the
  *     button relabels. Nothing waits on it and a failed probe changes nothing on the page.
  *
- *  2. GLOBAL SIGN-OUT. Signing out here also ends the shared session at the IdP, so signing out of
- *     one WitUS app signs you out of all of them (BAM's decision, 2026-08-30). Without it,
- *     "Continue as <name>" would offer to sign you straight back in the moment you signed out.
+ *  2. "SIGN OUT" vs. "SIGN OUT OF WITUS EVERYWHERE" (BAM, 2026-10-29, witus task 128 option (b),
+ *     replacing the 2026-08-30 global sign-out). "Sign out" ends only this app's session, so the
+ *     WitUS session stays and "Continue as <name>" offering to sign you straight back in is the
+ *     intended behaviour. A separate "Sign out of WitUS everywhere" also ends the shared session at
+ *     the IdP; other WitUS apps keep their own sessions until the person signs out of them.
  *
  * WHY A CORS FETCH AND NOT OIDC `prompt=none`. `prompt=none` is a NAVIGATION — you leave the page
  * to ask it — and the only way to ask without leaving is a hidden iframe, which Safari's ITP blocks.
@@ -136,7 +138,8 @@ export function witusRedirectUri(siteUrl: string): string {
 }
 
 /**
- * The `post_logout_redirect_uri` the IdP sends the visitor back to after a global sign-out.
+ * The `post_logout_redirect_uri` the IdP sends the visitor back to after "Sign out of WitUS
+ * everywhere".
  *
  * THE TRAILING SLASH IS REQUIRED. better-auth exact-matches this against the client's registered
  * `redirectUrls`, and the IdP registry registers `origin + "/"` for every app. Drop the slash and
@@ -148,6 +151,39 @@ export function witusRedirectUri(siteUrl: string): string {
  */
 export function witusPostLogoutRedirectUri(siteUrl: string): string {
   return `${normalizeOrigin(siteUrl)}/`;
+}
+
+/**
+ * Sign-out copy, in one place (BAM, 2026-10-29, witus task 128 option (b)). "Sign out" never flips
+ * to a global label (shared UI rule: the header Sign in / Sign out control is never renamed).
+ */
+export const SIGN_OUT_LABEL = "Sign out";
+export const SIGN_OUT_EVERYWHERE_LABEL = "Sign out of WitUS everywhere";
+export const SIGN_OUT_EVERYWHERE_HELP =
+  "Also signs you out of WitUS. Other WitUS apps you are signed in to stay signed in until you sign out of them.";
+
+/**
+ * What "Sign out of WitUS everywhere" does, with the browser pieces passed in so the order can be
+ * tested without a DOM.
+ *
+ * ORDER IS THE SAFETY PROPERTY: the LOCAL session is destroyed and AWAITED first, so if the IdP is
+ * unreachable, refuses the request, or the redirect never completes, the person is still signed out
+ * HERE. Handing off first would turn any IdP failure into "I clicked sign out and I am still signed
+ * in". A failed local request is swallowed: handing off anyway is still the better outcome, since
+ * the shared session ends and the stale local cookie is a signature over an identity the IdP no
+ * longer vouches for.
+ */
+export async function signOutEverywhere(deps: {
+  signOutLocal: () => Promise<unknown>;
+  navigate: (url: string) => void;
+  endSessionUrl: string;
+}): Promise<void> {
+  try {
+    await deps.signOutLocal();
+  } catch {
+    // Swallowed on purpose: see above. The handoff below must still happen.
+  }
+  deps.navigate(deps.endSessionUrl);
 }
 
 /** Identity shown on the button. Display only, never a credential. */

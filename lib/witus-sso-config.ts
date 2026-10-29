@@ -95,8 +95,9 @@ export function witusSilentSsoEndpoint(): string | null {
 }
 
 /**
- * The full RP-initiated logout URL for global sign-out, or `null` when this app is not a configured
- * OIDC client (in which case sign-out stays purely local).
+ * The full RP-initiated logout URL for "Sign out of WitUS everywhere", or `null` when this app is
+ * not a configured OIDC client (in which case that control does not render). The plain "Sign out"
+ * never uses it (BAM, 2026-10-29, witus task 128 option (b)).
  *
  * `client_id` IS REQUIRED, not optional: better-auth's endSession endpoint rejects a
  * `post_logout_redirect_uri` with `invalid_request` unless the request carries either a verifiable

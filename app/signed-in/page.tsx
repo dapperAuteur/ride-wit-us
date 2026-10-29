@@ -27,8 +27,8 @@ export const metadata = {
 
 export default async function SignedInPage() {
   const user = await requireUser();
-  // null when this app is not a configured OIDC client — the button falls back to a local-only
-  // sign-out and says "Sign out" instead of "Sign out of WitUS".
+  // null when this app is not a configured OIDC client — then only the local "Sign out" renders,
+  // with no "Sign out of WitUS everywhere" beside it.
   const endSessionUrl = await witusEndSessionUrl();
 
   return (
@@ -62,9 +62,7 @@ export default async function SignedInPage() {
             <div className="mt-10">
               <SignOutButton endSessionUrl={endSessionUrl} />
               <p className="mt-3 text-sm text-[#221E1B]/70">
-                {endSessionUrl
-                  ? "Signing out here signs you out of every WitUS app in this browser."
-                  : "Signs you out of RideWitUS on this device."}
+                Sign out signs you out of RideWitUS on this device.
               </p>
             </div>
 

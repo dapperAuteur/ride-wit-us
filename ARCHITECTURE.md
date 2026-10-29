@@ -298,9 +298,13 @@ real code flow regardless. A one-shot loop guard (a `sessionStorage` marker writ
 leaving, plus a `?sso=tried` query param for browsers with no storage) stops a stale IdP session
 producing probe → click → failure → probe forever.
 
-**Global sign-out** — signing out here ends the shared IdP session, so it signs you out of every
-WitUS app (BAM, 2026-08-30). **The order is the safety property:** the local session is destroyed
-and awaited first, then the browser is handed to
+**Sign out vs. Sign out of WitUS everywhere** (BAM, 2026-10-29, witus task 128 option (b),
+replacing the 2026-08-30 global sign-out). **Sign out** is a plain form POST to `/api/auth/signout`:
+it ends only this app's session and lands on `/`; the WitUS session and other WitUS apps stay
+signed in. When this deploy is a configured client, **Sign out of WitUS everywhere** renders beside
+it with the help text "Also signs you out of WitUS. Other WitUS apps you are signed in to stay
+signed in until you sign out of them." **The order is the safety property:** the local session is
+destroyed and awaited first, then the browser is handed to
 `<issuer>/oauth2/endsession?client_id=…&post_logout_redirect_uri=…`. If the IdP is unreachable or
 refuses, the person is still signed out here. `client_id` is required — better-auth rejects a
 `post_logout_redirect_uri` with `invalid_request` without it or a verifiable `id_token_hint`, and

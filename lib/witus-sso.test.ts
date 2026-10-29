@@ -1,5 +1,5 @@
 /**
- * WitUS SSO helpers — "Continue as <name>" and global sign-out.
+ * WitUS SSO helpers — "Continue as <name>" and "Sign out of WitUS everywhere".
  *
  * Offline and deterministic: no network, no DOM. It pins the things that are expensive to get wrong
  * and invisible when they are — the derived IdP URLs, the trailing slash on the post-logout URI,
@@ -10,6 +10,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_WITUS_OIDC_ISSUER,
+  SIGN_OUT_EVERYWHERE_HELP,
+  SIGN_OUT_EVERYWHERE_LABEL,
+  SIGN_OUT_LABEL,
+  signOutEverywhere,
   WITUS_CALLBACK_PATH,
   continueAsLabel,
   hasAttemptMarker,
@@ -153,5 +157,53 @@ describe("the probe response is display copy, never a credential", () => {
   it("pins the exact copy the visitor reads", () => {
     expect(continueAsLabel(null)).toBe("Sign in with WitUS");
     expect(continueAsLabel({ label: "Ada" })).toBe("Continue as Ada");
+  });
+});
+
+describe("Sign out vs. Sign out of WitUS everywhere (BAM, 2026-10-29, witus task 128 (b))", () => {
+  const END_SESSION =
+    "https://accounts.witus.online/api/idp/oauth2/endsession?client_id=witus-ride" +
+    `&post_logout_redirect_uri=${encodeURIComponent(witusPostLogoutRedirectUri("https://ride.witus.online"))}`;
+
+  it("keeps the exact copy", () => {
+    expect(SIGN_OUT_LABEL).toBe("Sign out");
+    expect(SIGN_OUT_EVERYWHERE_LABEL).toBe("Sign out of WitUS everywhere");
+    expect(SIGN_OUT_EVERYWHERE_HELP).toBe(
+      "Also signs you out of WitUS. Other WitUS apps you are signed in to stay signed in until you sign out of them."
+    );
+  });
+
+  it("ends the local session BEFORE navigating to the IdP", async () => {
+    const calls: string[] = [];
+    let release: () => void = () => {};
+    const local = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const run = signOutEverywhere({
+      signOutLocal: async () => {
+        calls.push("local:start");
+        await local;
+        calls.push("local:done");
+      },
+      navigate: (url) => calls.push(`navigate:${url}`),
+      endSessionUrl: END_SESSION,
+    });
+    await Promise.resolve();
+    expect(calls).toEqual(["local:start"]);
+    release();
+    await run;
+    expect(calls).toEqual(["local:start", "local:done", `navigate:${END_SESSION}`]);
+    expect(END_SESSION).toContain("/oauth2/endsession?client_id=");
+    expect(END_SESSION).toContain("post_logout_redirect_uri=https%3A%2F%2Fride.witus.online%2F");
+  });
+
+  it("still hands off when the local request fails", async () => {
+    const navigated: string[] = [];
+    await signOutEverywhere({
+      signOutLocal: () => Promise.reject(new Error("offline")),
+      navigate: (url) => navigated.push(url),
+      endSessionUrl: END_SESSION,
+    });
+    expect(navigated).toEqual([END_SESSION]);
   });
 });

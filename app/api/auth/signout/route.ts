@@ -3,7 +3,8 @@ import { endSession } from "@/lib/auth/dal";
 
 // /api/auth/signout — destroy the LOCAL session. Nothing else.
 //
-// This route deliberately knows nothing about the IdP. Global sign-out is two steps and the ORDER
+// This route deliberately knows nothing about the IdP. "Sign out" is this route alone (BAM,
+// 2026-10-29, witus task 128 option (b)). "Sign out of WitUS everywhere" is two steps and the ORDER
 // IS THE SAFETY PROPERTY: the caller awaits this, and only then hands the browser to the IdP's
 // end-session endpoint (components/sign-out-button.tsx). If the IdP is unreachable or refuses, the
 // person is still signed out here. Doing it the other way round would turn any IdP failure into "I

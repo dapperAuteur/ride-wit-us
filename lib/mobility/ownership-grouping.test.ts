@@ -6,10 +6,12 @@ const MINE = {
   vehicle: "11111111-1111-4111-8111-111111111111",
   place: "22222222-2222-4222-8222-222222222222",
   journey: "33333333-3333-4333-8333-333333333333",
+  vendor: "66666666-6666-4666-8666-666666666666",
 };
 const THEIRS = {
   vehicle: "44444444-4444-4444-8444-444444444444",
   place: "55555555-5555-4555-8555-555555555555",
+  vendor: "77777777-7777-4777-8777-777777777777",
 };
 
 /** A fake database: the current owner owns only the MINE ids. */
@@ -37,6 +39,11 @@ describe("ownership guard", () => {
   it("refuses another user's place even when the other end is the owner's", async () => {
     const r = await verifyOwnedRefs({ place: [MINE.place, THEIRS.place] }, fakeLoader());
     expect(r).toEqual({ ok: false, kind: "place", id: THEIRS.place });
+  });
+
+  it("refuses a vendor link that belongs to another user (trip form Vendor field)", async () => {
+    expect(await verifyOwnedRefs({ vendor: [MINE.vendor] }, fakeLoader())).toEqual({ ok: true });
+    expect(await verifyOwnedRefs({ vendor: [THEIRS.vendor] }, fakeLoader())).toEqual({ ok: false, kind: "vendor", id: THEIRS.vendor });
   });
 
   it("refuses a malformed id without querying", async () => {

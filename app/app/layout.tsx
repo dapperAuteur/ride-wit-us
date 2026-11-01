@@ -42,6 +42,9 @@ export default async function MobilityLayout({ children }: { children: React.Rea
                 <Link href="/app/places" className={NAV_LINK}>
                   Places
                 </Link>
+                <Link href="/app/vendors" className={NAV_LINK}>
+                  Vendors
+                </Link>
                 <Link href="/app/settings" className={NAV_LINK}>
                   Settings
                 </Link>

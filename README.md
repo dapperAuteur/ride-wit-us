@@ -40,7 +40,8 @@ app/
   episodes/             catalog + episode detail (32 episodes, statically generated)
   seasons/[n]/          season pages (4)
   app/                  the signed-in mobility app: dashboard, trips and multi-leg itineraries (flights,
-                        lodging), vehicles, saved places, settings (units, currency, time zone)
+                        lodging), vehicles, saved places, vendors (picked from CentenarianOS), settings
+                        (units, currency, time zone)
   waitlist/             public waitlist for the mobility app (static page)
   api/waitlist/         POST: validates, rate-limits, stores, emails new signups a confirmation, notifies BAM in WitUS Inbox
   signin/               the only door in — "Sign in with WitUS" / "Continue as <name>"
@@ -62,6 +63,8 @@ lib/
                         places), owner checks for every referenced id, per-currency subtotals, time zones,
                         itinerary grouping
   waitlist/             waitlist validation, the Inbox submission shape, the confirmation email
+  signed/               X-Witus-* signing and checking for server-to-server calls (shared test vectors)
+  centos/               signed client for CentenarianOS: vendors (E1 to E3), problems in plain words
   witus-sender.ts       Inbox/Outbox wrapper: env, stubbing, pre-flight schema check (witus-contracts.ts)
   sender-inbox.ts       canonical WitUS Inbox sender, copied verbatim from witus-inbox
   sender-outbox.ts      canonical WitUS Outbox sender, copied verbatim from witus-outbox
@@ -142,8 +145,14 @@ body.
 ## Integration with CentenarianOS
 
 **Today:** none at the data level. RideWitUS now has a database and, at `/app`, screens for vehicles, trips
-(every mode, flights included), multi-leg trips with lodging stays, and saved places (Phase 1a). Nothing is
-sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
+(every mode, flights included), multi-leg trips with lodging stays, and saved places (Phase 1a). Vendors
+(Phase 1f) are read live from CentenarianOS over the signed vendors API: `/app/vendors` searches your
+CentenarianOS vendor contacts and links one (RideWitUS stores only a `vendor_refs` pointer, never a name,
+address or price), each vendor's page shows your trips there and the prices you recorded in CentenarianOS,
+and the trip form has a Vendor field. RideWitUS never creates vendors; "Not listed?" opens CentenarianOS's
+own new-vendor form. Without `CENTOS_API_URL` and `RIDE_VENDOR_API_SECRET` the vendor screens say they are
+not switched on. A WitUS account that has never signed in to CentenarianOS sees "Connect CentenarianOS".
+Nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
 maintenance until the Stage 4 migration. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
 

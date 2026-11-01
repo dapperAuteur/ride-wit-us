@@ -7,6 +7,9 @@ import { getMobilityContext } from "@/lib/mobility/context";
 import { safeLoad } from "@/lib/mobility/load";
 import { TRIP_MODE_LABELS } from "@/lib/mobility/options";
 import { getJourney, getTrip, tripFormChoices } from "@/lib/mobility/queries";
+import { centosConfigured } from "@/lib/centos/client";
+import { getCentosVendor, vendorLabel } from "@/lib/centos/vendors";
+import { getVendorRef } from "@/lib/mobility/vendor-refs";
 import { tripFormValues } from "@/lib/mobility/trip-values";
 import { formatDate } from "@/lib/mobility/zoned-time";
 import { deleteTrip, updateTrip } from "../actions";
@@ -21,15 +24,22 @@ export default async function EditTripPage({ params }: { params: Promise<{ id: s
   const loaded = await safeLoad("load trip", async () => {
     const trip = await getTrip(ctx.user.id, id);
     if (!trip) return null;
-    const [choices, journey] = await Promise.all([
+    const [choices, journey, vendorRef] = await Promise.all([
       tripFormChoices(ctx.user.id, trip.vehicleId),
       trip.journeyId ? getJourney(ctx.user.id, trip.journeyId) : Promise.resolve(null),
+      trip.vendorRefId ? getVendorRef(ctx.user.id, trip.vendorRefId) : Promise.resolve(null),
     ]);
-    return { trip, choices, journey };
+    return { trip, choices, journey, vendorRef };
   });
   if (!loaded.ok) return <MobilityGate state="database_error" />;
   if (!loaded.data) notFound();
-  const { trip, choices, journey } = loaded.data;
+  const { trip, choices, journey, vendorRef } = loaded.data;
+  // The vendor's name is read from CentenarianOS (never stored here); a generic label if it can't be.
+  let vendor: { refId: string; label: string } | null = null;
+  if (vendorRef) {
+    const found = await getCentosVendor(ctx.user.witusSub, vendorRef.centosContactId);
+    vendor = { refId: vendorRef.id, label: found.ok ? vendorLabel(found.data.vendor, vendorRef.centosLocationId) : "Linked vendor" };
+  }
   const title = `${TRIP_MODE_LABELS[trip.mode]}, ${formatDate(trip.startDate)}`;
 
   return (
@@ -49,6 +59,8 @@ export default async function EditTripPage({ params }: { params: Promise<{ id: s
         defaultDate={trip.startDate}
         homeCurrency={ctx.settings.homeCurrency}
         submitLabel="Save changes"
+        vendor={vendor}
+        vendorsEnabled={centosConfigured("vendors")}
       />
       <section aria-labelledby="danger-heading" className="mt-12 border-t-4 border-dashed border-[#221E1B] pt-6 max-w-2xl">
         <h2 id="danger-heading" className="mb-3 font-display text-2xl text-[#221E1B]">

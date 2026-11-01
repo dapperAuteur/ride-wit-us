@@ -27,6 +27,7 @@ async function prepareTrip(userId: string, data: TripInput): Promise<{ ok: true;
       vehicle: [data.vehicleId],
       place: [data.originPlaceId, data.destinationPlaceId],
       journey: [data.journeyId],
+      vendor: [data.vendorRefId],
     },
     ownedIdLoader(userId)
   );
@@ -36,9 +37,11 @@ async function prepareTrip(userId: string, data: TripInput): Promise<{ ok: true;
         ? "vehicleId"
         : check.kind === "journey"
           ? "journeyId"
-          : check.id === data.originPlaceId
-            ? "originPlaceId"
-            : "destinationPlaceId";
+          : check.kind === "vendor"
+            ? "vendorRefId"
+            : check.id === data.originPlaceId
+              ? "originPlaceId"
+              : "destinationPlaceId";
     return { ok: false, state: refusedReference(check, field) };
   }
 

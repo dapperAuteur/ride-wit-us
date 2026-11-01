@@ -134,6 +134,8 @@ curl -X POST https://ridewitus.witus.online/api/outbox/publish \
 /app/journeys/new               plan a multi-leg trip
 /app/journeys/[id]              itinerary (legs + stays in order); /edit; /stays/new; /stays/[stayId]
 /app/places                     saved places with aliases; /new, /[id] edit + delete
+/app/vendors                    vendors linked from CentenarianOS (signed vendors API, read live, never cached);
+                                search and link one; /[id] details, your trips there, CentOS prices, remove link
 /api/auth/witus/authorize       GET  starts the OIDC code flow (state + PKCE)
 /api/auth/witus/callback        GET  finishes it and mints the session cookie
 /api/auth/signout               POST destroys the local session (303 to /, or 200 JSON)

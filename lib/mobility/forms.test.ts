@@ -127,8 +127,16 @@ describe("trip form", () => {
   });
 
   it("refuses ids that aren't ids and links that aren't web links", () => {
-    const r = parseTripForm({ ...TRIP_BASE, vehicleId: "1 OR 1=1", bookingUrl: "javascript:alert(1)" });
-    expect(!r.ok && Object.keys(r.fieldErrors).sort()).toEqual(["bookingUrl", "vehicleId"]);
+    const r = parseTripForm({ ...TRIP_BASE, vehicleId: "1 OR 1=1", vendorRefId: "../x", bookingUrl: "javascript:alert(1)" });
+    expect(!r.ok && Object.keys(r.fieldErrors).sort()).toEqual(["bookingUrl", "vehicleId", "vendorRefId"]);
+  });
+
+  it("keeps the picked vendor link, or none when the field is blank", () => {
+    const ref = "66666666-6666-4666-8666-666666666666";
+    const r = parseTripForm({ ...TRIP_BASE, vendorRefId: ref });
+    expect(r.ok && r.data.vendorRefId).toBe(ref);
+    const none = parseTripForm({ ...TRIP_BASE, vendorRefId: "" });
+    expect(none.ok && none.data.vendorRefId).toBeNull();
   });
 });
 

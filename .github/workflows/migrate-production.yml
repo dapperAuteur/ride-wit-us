@@ -1,0 +1,88 @@
+# Migrate the production database after a merge to main, so nobody pastes a connection string.
+# Post-deploy automation rule (gemini/witus CLAUDE.md, shared rules v9); first added with
+# CentenarianOS plan 70 R-3 (migration 0003, the receiver projections).
+#
+# Runs when a push to main changes a migration, and on demand (Actions -> "Migrate production
+# database" -> Run workflow). It reads one repository secret, NEON_DIRECT_URL: the Neon DIRECT
+# (unpooled) connection string for the database the production Vercel project is connected to. The
+# job hands it to drizzle-kit as DATABASE_URL_UNPOOLED, the first name drizzle.config.ts reads.
+# Set it once without copying the value (docs/01-operations.md, "Database migrations"):
+#   neon connection-string --project-id <production project id> | gh secret set NEON_DIRECT_URL --repo dapperAuteur/ride-wit-us
+# GitHub masks the value in every log line. The job fails closed when the secret is missing.
+#
+# Safe to run twice: drizzle-kit migrate applies only journal entries newer than the newest row in
+# drizzle.__drizzle_migrations, so a second run changes nothing.
+#
+# Timing: Vercel deploys the same push in parallel. Keep migrations additive (new tables, new
+# nullable columns) so the old code keeps working while this runs; a receiver whose table is not
+# there yet answers 500 lookup_failed and CentenarianOS retries on its backoff.
+name: Migrate production database
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "db/migrations/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require NEON_DIRECT_URL
+        env:
+          NEON_DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+        run: |
+          if [ -z "$NEON_DIRECT_URL" ]; then
+            echo "::error::Set the repository secret NEON_DIRECT_URL (see docs/01-operations.md, Database migrations)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Migrate
+        env:
+          DATABASE_URL_UNPOOLED: ${{ secrets.NEON_DIRECT_URL }}
+        run: pnpm db:migrate:prod
+
+      - name: Summary
+        if: always()
+        env:
+          DATABASE_URL_UNPOOLED: ${{ secrets.NEON_DIRECT_URL }}
+          PGCONNECT_TIMEOUT: "15"
+        run: |
+          {
+            echo "### Production migrations"
+            echo
+            echo "Migration files in the repo:"
+            echo
+            echo '```'
+            ls -1 db/migrations/*.sql
+            echo '```'
+            echo
+            echo "Rows in drizzle.__drizzle_migrations (id, created_at = journal \"when\"):"
+            echo
+            echo '```'
+            psql "$DATABASE_URL_UNPOOLED" -X -A -t \
+              -c "select id || ' ' || created_at from drizzle.__drizzle_migrations order by id" \
+              2>&1 || echo "(could not read the history table)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

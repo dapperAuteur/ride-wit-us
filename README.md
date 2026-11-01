@@ -49,6 +49,7 @@ app/
   api/auth/witus/       OIDC authorize + callback (state + PKCE, claims from userinfo)
   api/auth/signout/     POST that destroys the local session
   api/health/           GET + HEAD liveness probe for uptime monitors
+  api/events/           POST receivers for CentenarianOS's signed events: envelope-balance, calendar-activity, finance-match
   api/inbox-ingest/     POST endpoint that sends Mailgun email per form_type, then forwards to WitUS Inbox
   api/outbox/publish/   POST (admin or bearer token): episode / season / ad hoc → WitUS Outbox drafts
   styleguide/           archive of the two non-chosen design directions (not in main nav)
@@ -152,7 +153,12 @@ address or price), each vendor's page shows your trips there and the prices you 
 and the trip form has a Vendor field. RideWitUS never creates vendors; "Not listed?" opens CentenarianOS's
 own new-vendor form. Without `CENTOS_API_URL` and `RIDE_VENDOR_API_SECRET` the vendor screens say they are
 not switched on. A WitUS account that has never signed in to CentenarianOS sees "Connect CentenarianOS".
-Nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
+CentenarianOS's events land in three receivers, `/api/events/envelope-balance` (savings-envelope balances),
+`/api/events/calendar-activity` (shared calendar events) and `/api/events/finance-match` (cost matches),
+each with its own secret (`ENVELOPE_BALANCE_EVENTS_SECRET`, `CALENDAR_ACTIVITY_EVENTS_SECRET`,
+`FINANCE_MATCH_EVENTS_SECRET`); they keep the latest state per event in `envelope_balances`,
+`calendar_activities` and `finance_matches` ([`lib/events/`](./lib/events/)). Nothing shows them on a
+screen yet (suggested trips are phase 2c). Nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
 maintenance until the Stage 4 migration. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
 
@@ -195,6 +201,7 @@ lives in the local-only planning folder at `plans/future/PRD.md` (gitignored, so
 
 - `plans/future/PRD.md` (local-only, gitignored): product requirements for the mobility module and the CentenarianOS integration
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — tech stack, data flow, routing map, env vars
+- [docs/01-operations.md](./docs/01-operations.md) — post-deploy steps: the migrate workflow, its secret, the manual fallback, receiver hand checks
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — branch hygiene, commit style, dev workflow
 - [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — community expectations
 - [SECURITY.md](./SECURITY.md) — vulnerability reporting

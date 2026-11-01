@@ -50,6 +50,7 @@ app/
   api/auth/signout/     POST that destroys the local session
   api/health/           GET + HEAD liveness probe for uptime monitors
   api/events/           POST receivers for CentenarianOS's signed events: envelope-balance, calendar-activity, finance-match
+  api/cron/outbox-drain/ GET (Vercel Cron, CRON_SECRET): sends due trip.summary / cost.recorded events to CentenarianOS
   api/inbox-ingest/     POST endpoint that sends Mailgun email per form_type, then forwards to WitUS Inbox
   api/outbox/publish/   POST (admin or bearer token): episode / season / ad hoc → WitUS Outbox drafts
   styleguide/           archive of the two non-chosen design directions (not in main nav)
@@ -158,7 +159,13 @@ CentenarianOS's events land in three receivers, `/api/events/envelope-balance` (
 each with its own secret (`ENVELOPE_BALANCE_EVENTS_SECRET`, `CALENDAR_ACTIVITY_EVENTS_SECRET`,
 `FINANCE_MATCH_EVENTS_SECRET`); they keep the latest state per event in `envelope_balances`,
 `calendar_activities` and `finance_matches` ([`lib/events/`](./lib/events/)). Nothing shows them on a
-screen yet (suggested trips are phase 2c). Nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
+screen yet (suggested trips are phase 2c). Going the other way, every trip save, edit and delete queues
+a `trip.summary` event (and a `cost.recorded` one when the trip has a cost) in `outbound_events`, in the
+same transaction as the write ([`lib/outbox/`](./lib/outbox/)); the queue drains right after the save
+and from a daily cron (`/api/cron/outbox-drain`, `CRON_SECRET`), signed with
+`MOBILITY_ACTIVITY_EVENTS_SECRET` / `MOBILITY_COST_EVENTS_SECRET` to `MOBILITY_ACTIVITY_EVENTS_URL` /
+`MOBILITY_COST_EVENTS_URL`. Until those are set the rows wait. Demo users never queue anything.
+Otherwise nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
 maintenance until the Stage 4 migration. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
 

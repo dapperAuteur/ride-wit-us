@@ -19,6 +19,9 @@ const CENTOS_KG_PER_MILE: Partial<Record<TripMode, number>> = {
   run: 0,
 };
 
+/** CentenarianOS's car factor (kg CO2 per mile): the basis of `co2_avoided_kg` for human-powered trips. */
+export const CAR_KG_CO2_PER_MILE = CENTOS_KG_PER_MILE.car as number;
+
 /** kg CO2 for a trip, doubled for a round trip; null when the mode has no factor or no distance. */
 export function estimateCo2Kg(mode: TripMode, distanceM: number | null, isRoundTrip: boolean): number | null {
   const perMile = CENTOS_KG_PER_MILE[mode];

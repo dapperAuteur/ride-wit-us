@@ -1,7 +1,9 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { places, trips } from "@/db/schema";
@@ -14,6 +16,7 @@ import { verifyOwnedRefs } from "@/lib/mobility/ownership";
 import { ownedIdLoader } from "@/lib/mobility/ownership-db";
 import { resolvePlaceRef } from "@/lib/mobility/places";
 import { parseTripForm, type TripInput } from "@/lib/mobility/trip-form";
+import { drainForUser, loadTrip, tripFactsOf, tripQueueStatement } from "@/lib/outbox/trip-emit";
 
 type TripValues = Omit<typeof trips.$inferInsert, "userId" | "id">;
 
@@ -83,12 +86,23 @@ export async function createTrip(_prev: FormState, formData: FormData): Promise<
         .where(and(eq(trips.journeyId, parsed.data.journeyId), eq(trips.userId, userId)));
       legOrder = nextLegOrder(legs);
     }
-    await getDb()
-      .insert(trips)
-      .values({ ...prepared.values, legOrder, userId });
+    // The id is made here so the trip.summary event can name it in the same transaction as the insert
+    // (PRD §6.7: a fact is never saved without its event).
+    const id = randomUUID();
+    const db = getDb();
+    const insert = db.insert(trips).values({ ...prepared.values, id, legOrder, userId });
+    const queue = await tripQueueStatement(db, {
+      userId,
+      emitter: owner.ctx.user,
+      before: null,
+      after: tripFactsOf({ movingTimeS: null, assistLevel: null, caloriesKcal: null, caloriesSource: null, source: "manual", ...prepared.values, id } as Parameters<typeof tripFactsOf>[0]),
+      vehicleId: prepared.values.vehicleId ?? null,
+    });
+    await (queue ? db.batch([insert, queue.statement]) : insert);
   } catch (err) {
     return databaseFailure("create trip", err);
   }
+  after(() => drainForUser(userId));
   revalidatePath("/app", "layout");
   redirect(parsed.data.journeyId ? `/app/journeys/${parsed.data.journeyId}?saved=leg` : "/app/trips?saved=1");
 }
@@ -106,15 +120,25 @@ export async function updateTrip(id: string, _prev: FormState, formData: FormDat
     if (!prepared.ok) return prepared.state;
     const { journeyId: _ignored, ...values } = prepared.values;
     void _ignored;
-    const rows = await getDb()
+    const db = getDb();
+    const before = await loadTrip(db, userId, id);
+    if (!before) return NOT_FOUND;
+    const update = db
       .update(trips)
       .set({ ...values, updatedAt: sql`now()` })
-      .where(and(eq(trips.id, id), eq(trips.userId, userId)))
-      .returning({ id: trips.id });
-    if (!rows.length) return NOT_FOUND;
+      .where(and(eq(trips.id, id), eq(trips.userId, userId)));
+    const queue = await tripQueueStatement(db, {
+      userId,
+      emitter: owner.ctx.user,
+      before: tripFactsOf(before),
+      after: tripFactsOf({ ...before, ...values }),
+      vehicleId: values.vehicleId ?? null,
+    });
+    await (queue ? db.batch([update, queue.statement]) : update);
   } catch (err) {
     return databaseFailure("update trip", err);
   }
+  after(() => drainForUser(userId));
   revalidatePath("/app", "layout");
   return { ok: true, message: "Saved." };
 }
@@ -124,16 +148,26 @@ export async function deleteTrip(id: string): Promise<FormState> {
   if (!owner.ok) return owner.state;
   if (!isUuid(id)) return NOT_FOUND;
   let journeyId: string | null = null;
+  const userId = owner.ctx.user.id;
   try {
-    const rows = await getDb()
-      .delete(trips)
-      .where(and(eq(trips.id, id), eq(trips.userId, owner.ctx.user.id)))
-      .returning({ id: trips.id, journeyId: trips.journeyId });
-    if (!rows.length) return NOT_FOUND;
-    journeyId = rows[0].journeyId;
+    const db = getDb();
+    const before = await loadTrip(db, userId, id);
+    if (!before) return NOT_FOUND;
+    journeyId = before.journeyId;
+    const remove = db.delete(trips).where(and(eq(trips.id, id), eq(trips.userId, userId)));
+    // Deleting retires the trip's events (is_active: false) in the same transaction.
+    const queue = await tripQueueStatement(db, {
+      userId,
+      emitter: owner.ctx.user,
+      before: tripFactsOf(before),
+      after: null,
+      vehicleId: before.vehicleId,
+    });
+    await (queue ? db.batch([remove, queue.statement]) : remove);
   } catch (err) {
     return databaseFailure("delete trip", err);
   }
+  after(() => drainForUser(userId));
   revalidatePath("/app", "layout");
   redirect(journeyId ? `/app/journeys/${journeyId}?deleted=leg` : "/app/trips?deleted=1");
 }

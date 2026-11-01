@@ -97,7 +97,18 @@ export async function tripFormChoices(userId: string, keepVehicleId: string | nu
     vehicles: vs
       .filter((v) => v.isActive || v.id === keepVehicleId)
       .map((v) => ({ id: v.id, nickname: v.isActive ? v.nickname : `${v.nickname} (retired)`, defaultTripMode: v.defaultTripMode })),
-    places: ps.map((p) => ({ id: p.id, label: p.label })),
+    // Aliases, address and coordinates let a picked vendor match a saved place and estimate a
+    // distance in the browser (lib/mobility/vendor-fill.ts). The rider's own places, on their own
+    // signed-in page.
+    places: ps.map((p) => ({
+      id: p.id,
+      label: p.label,
+      kind: p.kind,
+      aliases: p.aliases,
+      address: p.address,
+      lat: p.lat,
+      lng: p.lng,
+    })),
   };
 }
 

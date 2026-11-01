@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckboxField,
   DistanceField,
@@ -17,6 +17,8 @@ import { TimeZoneField } from "@/components/mobility/time-zone-field";
 import { VendorPicker } from "@/components/mobility/vendor-picker";
 import { linkVendor, searchVendors } from "../vendors/actions";
 import type { FormState } from "@/lib/mobility/form-state";
+import { planVendorFill, type FillPlace } from "@/lib/mobility/vendor-fill";
+import type { LinkVendorResult } from "../vendors/actions";
 import {
   BOOKED_MODES,
   FORM_TRIP_PURPOSES,
@@ -69,30 +71,38 @@ export interface VehicleChoice {
   defaultTripMode: string | null;
 }
 
-export interface PlaceChoice {
-  id: string;
-  label: string;
-}
+/** A saved place: label for the select, plus what a vendor pick matches and measures against. */
+export type PlaceChoice = FillPlace;
 
 /** The select's value for "not a saved place: type it". */
 const OTHER = "__other__";
+
+function initialChoice(placeId: string | null, label: string | null, places: readonly PlaceChoice[]): string {
+  return placeId ?? (label || !places.length ? OTHER : "");
+}
 
 function PlacePicker({
   end,
   label,
   places,
-  defaultPlaceId,
+  choice,
+  onChoice,
   defaultLabel,
+  labelKey = 0,
   errors,
 }: {
   end: "origin" | "destination";
   label: string;
   places: readonly PlaceChoice[];
-  defaultPlaceId: string | null;
+  /** The select's value: a place id, OTHER, or "" for not set. */
+  choice: string;
+  onChoice: (choice: string) => void;
   defaultLabel: string | null;
+  /** Bumped when a vendor pick fills the typed text, so the field remounts with it. */
+  labelKey?: number;
   errors: Record<string, string>;
 }) {
-  const [choice, setChoice] = useState(defaultPlaceId ?? (defaultLabel || !places.length ? OTHER : ""));
+  const setChoice = onChoice;
   const placeField = `${end}PlaceId`;
   const labelField = `${end}Label`;
   const options: Option[] = [...places.map((p) => ({ value: p.id, label: p.label })), { value: OTHER, label: "Somewhere else…" }];
@@ -116,6 +126,7 @@ function PlacePicker({
       <input type="hidden" name={placeField} value={choice && choice !== OTHER ? choice : ""} />
       {choice === OTHER ? (
         <TextField
+          key={labelKey}
           name={labelField}
           label={places.length ? "Where" : "Name or address"}
           hint="If this matches one of your saved places or its other names, the trip links to it."
@@ -161,6 +172,82 @@ export function TripForm({
   const v = initial;
   const [mode, setMode] = useState<string>(v?.mode ?? "bike");
   const [vehicleId, setVehicleId] = useState<string>(v?.vehicleId ?? "");
+  const [originChoice, setOriginChoice] = useState(() => initialChoice(v?.originPlaceId ?? null, v?.originLabel ?? null, places));
+  const [destinationChoice, setDestinationChoice] = useState(() =>
+    initialChoice(v?.destinationPlaceId ?? null, v?.destinationLabel ?? null, places)
+  );
+  // A vendor pick fills empty fields by remounting them with a new default (lib/mobility/vendor-fill.ts).
+  const [destinationText, setDestinationText] = useState({ text: v?.destinationLabel ?? null, key: 0 });
+  const [distanceFill, setDistanceFill] = useState<{ meters: number | null; from: string; to: string; key: number } | null>(
+    null
+  );
+  const [fillNote, setFillNote] = useState<string | null>(null);
+  // What the last vendor pick put in "To" and "Distance". Picking a different vendor may replace
+  // those values (they were never the rider's), but not anything the rider changed since.
+  const filledDestination = useRef<string | null>(null);
+  const filledDistanceText = useRef<string | null>(null);
+
+  useEffect(() => {
+    // The distance field formats the estimate in the rider's units; remember the text it shows.
+    const value = distanceFill && formRef.current ? new FormData(formRef.current).get("distance") : null;
+    filledDistanceText.current = typeof value === "string" && value ? value : null;
+  }, [distanceFill, formRef]);
+
+  /** Fill what is still empty from the vendor just picked; never replace what the rider entered. */
+  const onVendorLinked = (linked: Extract<LinkVendorResult, { ok: true }>) => {
+    const current = formRef.current ? new FormData(formRef.current) : null;
+    const text = (name: string) => {
+      const value = current?.get(name);
+      return typeof value === "string" ? value : "";
+    };
+    let destinationPlaceId = destinationChoice && destinationChoice !== OTHER ? destinationChoice : null;
+    let destinationLabel = destinationChoice === OTHER ? text("destinationLabel") : "";
+    if (filledDestination.current && (destinationPlaceId ?? destinationLabel) === filledDestination.current) {
+      destinationPlaceId = null;
+      destinationLabel = "";
+    }
+    let distanceText = text("distance");
+    const distanceWasOurs = !!filledDistanceText.current && distanceText === filledDistanceText.current;
+    if (distanceWasOurs) distanceText = "";
+
+    const plan = planVendorFill({
+      fill: linked.fill,
+      places,
+      originPlaceId: originChoice && originChoice !== OTHER ? originChoice : null,
+      destination: { placeId: destinationPlaceId, label: destinationLabel },
+      distanceText,
+    });
+    if (plan.destination && "placeId" in plan.destination) {
+      filledDestination.current = plan.destination.placeId;
+      setDestinationChoice(plan.destination.placeId);
+    }
+    if (plan.destination && "label" in plan.destination) {
+      const label = plan.destination.label;
+      filledDestination.current = label;
+      setDestinationChoice(OTHER);
+      setDestinationText((d) => ({ text: label, key: d.key + 1 }));
+    }
+    if (plan.estimate) {
+      const estimate = plan.estimate;
+      setDistanceFill((d) => ({ ...estimate, key: (d?.key ?? 0) + 1 }));
+    } else if (distanceWasOurs) {
+      // The last vendor's estimate does not fit this one: clear it rather than leave it wrong.
+      setDistanceFill((d) => ({ meters: null, from: "", to: "", key: (d?.key ?? 0) + 1 }));
+    }
+    const parts: string[] = [];
+    if (plan.filled.length) {
+      parts.push(
+        `Filled from ${linked.label}: ${plan.filled
+          .map((f) => (f === "Distance" ? "Distance (a straight-line estimate)" : f))
+          .join(", ")}. Check them above before saving.`
+      );
+    }
+    if (plan.kept.length) parts.push(`Kept what you entered for ${plan.kept.join(" and ")}.`);
+    if (!plan.estimate && !plan.kept.includes("Distance")) {
+      parts.push("Distance needs both ends as saved places with coordinates, so enter it yourself.");
+    }
+    setFillNote(parts.join(" ") || null);
+  };
 
   const hasBooking = !!(v?.carrierName || v?.confirmationNumber || v?.flightNumber || v?.seatAssignment || v?.bookingUrl);
   const showBooking = BOOKED_MODES.has(mode as TripMode) || hasBooking;
@@ -250,13 +337,23 @@ export function TripForm({
         <h2 id="where-heading" className="font-display text-2xl text-[#221E1B]">
           Where and how far
         </h2>
-        <PlacePicker end="origin" label="From" places={places} defaultPlaceId={v?.originPlaceId ?? null} defaultLabel={v?.originLabel ?? null} errors={errors} />
+        <PlacePicker
+          end="origin"
+          label="From"
+          places={places}
+          choice={originChoice}
+          onChoice={setOriginChoice}
+          defaultLabel={v?.originLabel ?? null}
+          errors={errors}
+        />
         <PlacePicker
           end="destination"
           label="To"
           places={places}
-          defaultPlaceId={v?.destinationPlaceId ?? null}
-          defaultLabel={v?.destinationLabel ?? null}
+          choice={destinationChoice}
+          onChoice={setDestinationChoice}
+          defaultLabel={destinationText.text}
+          labelKey={destinationText.key}
           errors={errors}
         />
         <CheckboxField
@@ -266,7 +363,18 @@ export function TripForm({
           defaultChecked={v?.isRoundTrip}
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <DistanceField name="distance" label="Distance" defaultMeters={v?.distanceM} error={errors.distance} />
+          <DistanceField
+            key={distanceFill?.key ?? 0}
+            name="distance"
+            label="Distance"
+            defaultMeters={distanceFill ? distanceFill.meters : v?.distanceM}
+            hint={
+              distanceFill?.meters != null
+                ? `Estimate, edit if needed: a straight line from ${distanceFill.from} to ${distanceFill.to}. The road is longer.`
+                : undefined
+            }
+            error={errors.distance}
+          />
           <TextField
             name="durationMin"
             label="Duration (minutes)"
@@ -368,8 +476,14 @@ export function TripForm({
             initial={vendor}
             search={searchVendors}
             link={linkVendor}
+            onLinked={onVendorLinked}
             error={errors.vendorRefId}
           />
+        ) : null}
+        {fillNote ? (
+          <p role="status" className="text-sm text-[#221E1B]">
+            {fillNote}
+          </p>
         ) : null}
         <TextAreaField name="notes" label="Notes" maxLength={2000} defaultValue={v?.notes} error={errors.notes} />
       </section>

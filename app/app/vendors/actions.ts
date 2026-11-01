@@ -6,7 +6,16 @@ import { NOT_FOUND, databaseFailure, requireMobilityOwner } from "@/lib/mobility
 import type { FormState } from "@/lib/mobility/form-state";
 import { deleteVendorRef, upsertVendorRef } from "@/lib/mobility/vendor-refs";
 import { centosProblemCopy } from "@/lib/centos/messages";
-import { getCentosVendor, isCentosId, searchCentosVendors, vendorChoices, vendorLabel, type VendorChoice } from "@/lib/centos/vendors";
+import {
+  getCentosVendor,
+  isCentosId,
+  searchCentosVendors,
+  vendorChoices,
+  vendorLabel,
+  vendorTripFill,
+  type VendorChoice,
+} from "@/lib/centos/vendors";
+import type { VendorTripFill } from "@/lib/mobility/vendor-fill";
 
 /**
  * Vendor actions for the picker and the vendor pages. Vendors are read from CentenarianOS on the
@@ -41,7 +50,9 @@ export async function searchVendors(q: string): Promise<VendorSearchResult> {
   };
 }
 
-export type LinkVendorResult = { ok: true; refId: string; label: string } | { ok: false; error: string; code: string };
+export type LinkVendorResult =
+  | { ok: true; refId: string; label: string; fill: VendorTripFill }
+  | { ok: false; error: string; code: string };
 
 /**
  * Save a pointer to a CentenarianOS vendor (and location) the user picked. The vendor is read back
@@ -60,7 +71,13 @@ export async function linkVendor(contactId: string, locationId: string | null): 
   }
   try {
     const ref = await upsertVendorRef(owner.ctx.user.id, contactId, locationId);
-    return { ok: true, refId: ref.id, label: vendorLabel(found.data.vendor, locationId) };
+    return {
+      ok: true,
+      refId: ref.id,
+      label: vendorLabel(found.data.vendor, locationId),
+      // For the trip form's fill (lib/mobility/vendor-fill.ts). Not stored here.
+      fill: vendorTripFill(found.data.vendor, locationId),
+    };
   } catch (err) {
     return { ok: false, error: errorOf(databaseFailure("link vendor", err), "Couldn't save. Try again in a minute."), code: "database_error" };
   }

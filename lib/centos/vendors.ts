@@ -8,6 +8,7 @@
  * Shapes are checked on arrival. A response that does not match is `invalid_response`, not a crash.
  */
 import { z } from "zod";
+import type { VendorTripFill } from "@/lib/mobility/vendor-fill";
 import { centosGet, type CentosCallOptions, type CentosResult } from "./client";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -125,6 +126,20 @@ export async function getCentosVendorPrices(
 export function vendorLabel(vendor: Pick<CentosVendor, "name" | "locations">, locationId: string | null): string {
   const location = locationId ? vendor.locations.find((l) => l.id === locationId) : undefined;
   return location ? `${vendor.name} · ${location.label}` : vendor.name;
+}
+
+/**
+ * What the trip form may fill from a picked vendor (lib/mobility/vendor-fill.ts). Sent to the
+ * browser only in answer to the rider's own pick, and never stored unless they save the trip.
+ */
+export function vendorTripFill(vendor: Pick<CentosVendor, "name" | "locations">, locationId: string | null): VendorTripFill {
+  const location = locationId ? vendor.locations.find((l) => l.id === locationId) : undefined;
+  return {
+    label: vendorLabel(vendor, locationId),
+    name: vendor.name,
+    locationLabel: location?.label ?? null,
+    address: location?.address ?? null,
+  };
 }
 
 /** One pickable row per vendor, plus one per location when a vendor has more than one. */

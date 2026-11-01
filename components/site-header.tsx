@@ -51,10 +51,10 @@ export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn }: Si
           aria-label={`${APP_NAME} home`}
           className="inline-flex shrink-0 items-center gap-3 min-h-11 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {/* The image steps aside where the bar is tightest (phones, and md to lg once the section
               links are inline). The name stays at every width: it is the only visible brand on the
               chalk theme, whose wordmark is light-on-light. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={theme.wordmarkSrc}
             alt=""

@@ -15,6 +15,9 @@
  * as often as right.
  *
  * Nothing here is stored. The filled text is saved only if the rider submits the trip with it.
+ * That saved name and address is a recorded exception to PRD §5.11's "stores no vendor name or
+ * address" (BAM, 2026-11-01: "Vendor name and address go into the trip's To field (keep the
+ * current fill)"): it is the trip's destination as typed, never refreshed from CentenarianOS.
  */
 import { matchPlace, normalizePlaceName, type PlaceLike } from "./places";
 

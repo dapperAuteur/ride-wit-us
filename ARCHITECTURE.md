@@ -317,6 +317,15 @@ this app holds no id_token client-side. The redirect URI must be **exactly**
 `https://ride.witus.online/`, trailing slash included, because better-auth exact-matches it against
 the client's registered `redirectUrls`.
 
+**Where the everywhere control appears** (BAM, 2026-11-01): beside "Sign out" in the header, and in
+the account strip at the foot of every `/app` page (with its help text visible). In the header it
+sits in the bar from `lg` up, at the right end of the second row from `md` to `lg` (the bar is full
+there), and in the phone Menu's Account group below `md`, next to a copy of "Sign out". Every copy
+uses one click handler (`useSignOutEverywhere` in `components/sign-out-button.tsx`). Pages that
+render per request pass the end-session URL to `SiteHeader`; the static public pages get it from
+`/api/auth/session`, which answers `{ signedIn, endSessionUrl }` (the URL only when signed in; it
+holds only the public client id and the return address).
+
 ### The IdP registry has to match
 
 Redirect URIs are compared with `===`; a mismatch is a 400 at the IdP, not a fallback. This app is

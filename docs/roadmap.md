@@ -3,7 +3,7 @@ app: ride
 name: RideWitUS
 stage: beta
 url: https://ride.witus.online
-updated: 2026-10-29
+updated: 2026-11-01
 ---
 
 ## Live now
@@ -18,6 +18,7 @@ updated: 2026-10-29
 
 ## In progress
 - Owner hand-check of Phase 1a and a week of logged trips (plan 02)
+- Signed calls with CentenarianOS (CentenarianOS plan 70, wave 1): request signing and checking, tested against the shared vectors
 
 ## Next
 - Phase 1b: fuel logs, maintenance and components with service intervals (plan 02)

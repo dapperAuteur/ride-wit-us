@@ -187,6 +187,9 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `DATABASE_URL` (or `STORAGE_DATABASE_URL`) | For mobility | — | Pooled Neon connection string. Unset ⇒ `/app` shows "not switched on", `/api/waitlist` returns 503, the build still passes |
 | `DATABASE_URL_UNPOOLED` (or `STORAGE_DATABASE_URL_UNPOOLED`) | Migrations only | — | Direct Neon URL for `pnpm db:migrate:prod`, exported in BAM's shell, never committed |
 | `RATE_LIMIT_SALT` | Recommended | — | HMAC key for rate-limit bucket keys so stored keys cannot be reversed to IPs |
+| `CENTOS_API_URL` | For CentenarianOS features | — | CentenarianOS base URL (its primary domain in its Vercel project). No default: unset ⇒ calls answer `not_configured` and make no request |
+| `RIDE_VENDOR_API_SECRET` | For vendors | — | Signs calls to CentenarianOS `GET /api/v1/ride/vendors…`. Same value as on CentenarianOS; `openssl rand -hex 32` |
+| `RIDE_RESYNC_SECRET` | For Sync now | — | Signs `POST /api/v1/ride/resync` to CentenarianOS. Same value as on CentenarianOS |
 | `SENTRY_DSN` | No | — | Better Stack ingest DSN for server + edge errors. Unset ⇒ the SDK never initializes |
 | `NEXT_PUBLIC_SENTRY_DSN` | No | — | Same source, browser side. Inlined at build time |
 | `SENTRY_ENVIRONMENT` | No | `VERCEL_ENV` → `NODE_ENV` | Label on every event |

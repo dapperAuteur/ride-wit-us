@@ -53,6 +53,7 @@ The `created_at` of the last row equals the last entry's `when` in `db/migration
 |---|---|
 | 0000 to 0002 | Users, settings, vehicles, trips, journeys, lodging, places, vendor refs, waitlist |
 | 0003 | `envelope_balances`, `calendar_activities`, `finance_matches` (CentenarianOS event projections) |
+| 0004 | `outbound_events` (the outbox for events sent to CentenarianOS) |
 
 ## CentenarianOS event receivers
 
@@ -74,3 +75,30 @@ curl -s -X POST https://ride.witus.online/api/events/envelope-balance \
 # expect {"accepted":0,"rejected":[]}; the same request with one byte of BODY changed, or a TS
 # 301 seconds old, answers 401 {"ok":false,"error":"Unauthorized","code":"unauthorized"}
 ```
+
+## Outbox to CentenarianOS
+
+Trip writes queue `trip.summary` and `cost.recorded` in `outbound_events` and send them right after
+the response. `vercel.json` also runs `GET /api/cron/outbox-drain` daily at 06:30 UTC (a once-a-day
+schedule works on every Vercel plan; a shorter interval needs the plan checked first, CentenarianOS
+plan 70 §5.2). Vercel sends `Authorization: Bearer $CRON_SECRET`; without `CRON_SECRET` the route
+answers 503.
+
+Run a drain by hand (the secret from a shell variable, never echoed):
+
+```bash
+curl -s -H "Authorization: Bearer $CRON_SECRET" https://ride.witus.online/api/cron/outbox-drain
+# {"ok":true,"data":{"receivers":[{"receiver":"centos.mobility_activity","sent":1,...}]}}
+```
+
+See what is waiting (read-only):
+
+```bash
+psql "$(neon connection-string --project-id <production project id>)" -X -c \
+  "select receiver, status, last_reason, count(*) from outbound_events group by 1, 2, 3 order by 1, 2"
+```
+
+`pending` + `unknown_subject` = the person has not signed in to CentenarianOS with WitUS yet (waits,
+never fails). `failed` = CentenarianOS refused the row (`invalid_event:<field>`,
+`unsupported_schema_version`) or the backoff ran out; fix the cause, then set those rows back to
+`pending` with `next_attempt_at = now()` and run a drain.

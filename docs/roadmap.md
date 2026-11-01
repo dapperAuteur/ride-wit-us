@@ -21,6 +21,7 @@ updated: 2026-11-01
 - Signed calls with CentenarianOS (CentenarianOS plan 70, wave 1): request signing and checking, tested against the shared vectors
 - Phase 1f: vendors picked from CentenarianOS, a vendor page with your trips and CentenarianOS prices, and a Vendor field on trips (built; works once the CentenarianOS URL and vendor secret are set, task 17)
 - Phase 2b: receivers for CentenarianOS's envelope balances, shared calendar events and cost matches, plus the automatic production migrate workflow (CentenarianOS plan 70 R-3; built, live once the merge and secrets in task 19 are done)
+- Phase 2a: trips send trip.summary and cost.recorded to CentenarianOS through an outbox (plan 70 R-4; built; CentenarianOS's receivers, branch C-3, are not built yet, so rows wait)
 
 ## Next
 - Phase 1b: fuel logs, maintenance and components with service intervals (plan 02)
@@ -30,7 +31,7 @@ updated: 2026-11-01
 ## Backlog
 - Phase 1e: receipt and ticket image importer
 - Phase 1g: public demo with a nightly reset
-- Phase 2: signed events to CentenarianOS (outbox), suggested trips from the calendar, Sync now
+- Phase 2: trip.plan, forecast and vehicle snapshot events, the resync script, suggested trips from the calendar, Sync now
 - Phase 3: move CentenarianOS travel data here (owner runs the migration)
 - Later: Garmin and Strava APIs, GPX and FIT files, insurance and registration forecasts
 

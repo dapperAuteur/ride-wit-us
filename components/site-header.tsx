@@ -49,13 +49,19 @@ export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn }: Si
         <Link
           href={basePath || "/"}
           aria-label={`${APP_NAME} home`}
-          className="inline-flex shrink-0 items-center gap-3 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
+          className="inline-flex shrink-0 items-center gap-3 min-h-11 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={theme.wordmarkSrc} alt="" aria-hidden="true" className="h-6 sm:h-7 w-auto block" />
-          {/* Hidden where the bar is tightest (phones, and md to lg once the section links are
-              inline); the link's aria-label carries the name at every width. */}
-          <span className="hidden sm:inline md:hidden lg:inline font-semibold tracking-tight">{APP_NAME}</span>
+          {/* The image steps aside where the bar is tightest (phones, and md to lg once the section
+              links are inline). The name stays at every width: it is the only visible brand on the
+              chalk theme, whose wordmark is light-on-light. */}
+          <img
+            src={theme.wordmarkSrc}
+            alt=""
+            aria-hidden="true"
+            className="hidden sm:block md:hidden lg:block h-7 w-auto"
+          />
+          <span className="font-semibold tracking-tight">{APP_NAME}</span>
         </Link>
         <nav aria-label="Primary" className="flex items-center gap-0 md:gap-1 lg:gap-3 text-sm">
           {links.map((l) => (

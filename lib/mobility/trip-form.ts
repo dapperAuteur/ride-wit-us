@@ -41,6 +41,8 @@ export interface TripInput {
   category: TripCategory;
   vehicleId: string | null;
   journeyId: string | null;
+  /** A vendor_refs row (a CentenarianOS vendor the user linked), or null. */
+  vendorRefId: string | null;
   startDate: string;
   endDate: string | null;
   departedAt: Date | null;
@@ -100,6 +102,7 @@ const schema = z.object({
   category: optEnum(TRIP_CATEGORIES, "Choose travel or fitness."),
   vehicleId: optUuid(BAD_ID),
   journeyId: optUuid(BAD_ID),
+  vendorRefId: optUuid(BAD_ID),
   startDate: optDate(),
   endDate: optDate(),
   departLocal: optLocalTime(),
@@ -158,6 +161,7 @@ export function parseTripForm(input: Record<string, unknown>): Parsed<TripInput>
       category: HUMAN_POWERED_MODES.has(v.mode) && v.category === "fitness" ? "fitness" : "travel",
       vehicleId: v.vehicleId,
       journeyId: v.journeyId,
+      vendorRefId: v.vendorRefId,
       startDate,
       endDate: v.endDate,
       departedAt,

@@ -19,6 +19,7 @@ updated: 2026-11-01
 ## In progress
 - Owner hand-check of Phase 1a and a week of logged trips (plan 02)
 - Signed calls with CentenarianOS (CentenarianOS plan 70, wave 1): request signing and checking, tested against the shared vectors
+- Phase 1f: vendors picked from CentenarianOS, a vendor page with your trips and CentenarianOS prices, and a Vendor field on trips (built; works once the CentenarianOS URL and vendor secret are set, task 17)
 
 ## Next
 - Phase 1b: fuel logs, maintenance and components with service intervals (plan 02)
@@ -27,7 +28,6 @@ updated: 2026-11-01
 
 ## Backlog
 - Phase 1e: receipt and ticket image importer
-- Phase 1f: vendors, with prices from CentenarianOS
 - Phase 1g: public demo with a nightly reset
 - Phase 2: signed events both ways with CentenarianOS, suggested trips from the calendar, Sync now
 - Phase 3: move CentenarianOS travel data here (owner runs the migration)
@@ -35,7 +35,8 @@ updated: 2026-11-01
 
 ## Blocked on
 - Phase 1a hand-check (task 13)
-- CentenarianOS endpoints and events for vendors, calendar and resync (plan 02, dependency D4)
+- CentenarianOS URL and vendor secret on this app, for vendors (task 17)
+- CentenarianOS mobility receivers and cost.matched, for Phase 2 (CentenarianOS plan 70, branches C-3 and C-6)
 - Decision on AI or local scanning for the image importer (PRD question 13)
 - Database rename to match the repo (task 15, not urgent)
 - Error-monitoring DSN and uptime monitor (tasks 02 and 03)

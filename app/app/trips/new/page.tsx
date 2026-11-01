@@ -3,6 +3,7 @@ import { MobilityGate } from "@/components/mobility/mobility-gate";
 import { PageHeader } from "@/components/mobility/page-header";
 import { UnitsProvider } from "@/components/units/units-provider";
 import { getMobilityContext } from "@/lib/mobility/context";
+import { centosConfigured } from "@/lib/centos/client";
 import { localDate } from "@/lib/mobility/dates";
 import { safeLoad } from "@/lib/mobility/load";
 import { getJourney, tripFormChoices } from "@/lib/mobility/queries";
@@ -40,6 +41,7 @@ export default async function NewTripPage({ searchParams }: { searchParams: Prom
         defaultDate={journey ? journey.journey.startDate : localDate(new Date(), ctx.settings.timeZone)}
         homeCurrency={ctx.settings.homeCurrency}
         submitLabel={journey ? "Add leg" : "Log trip"}
+        vendorsEnabled={centosConfigured("vendors")}
       />
     </UnitsProvider>
   );

@@ -14,6 +14,8 @@ import {
   type Option,
 } from "@/components/mobility/form-kit";
 import { TimeZoneField } from "@/components/mobility/time-zone-field";
+import { VendorPicker } from "@/components/mobility/vendor-picker";
+import { linkVendor, searchVendors } from "../vendors/actions";
 import type { FormState } from "@/lib/mobility/form-state";
 import {
   BOOKED_MODES,
@@ -34,6 +36,7 @@ export interface TripFormValues {
   purpose: string | null;
   category: string;
   vehicleId: string | null;
+  vendorRefId: string | null;
   startDate: string;
   endDate: string | null;
   /** datetime-local values in their own zones (converted on the server page). */
@@ -136,6 +139,8 @@ export function TripForm({
   defaultDate,
   homeCurrency,
   submitLabel,
+  vendor = null,
+  vendorsEnabled = false,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   initial: TripFormValues | null;
@@ -147,6 +152,10 @@ export function TripForm({
   defaultDate: string;
   homeCurrency: string | null;
   submitLabel: string;
+  /** The trip's linked CentenarianOS vendor, with its label read on the server. */
+  vendor?: { refId: string; label: string } | null;
+  /** CENTOS_API_URL and RIDE_VENDOR_API_SECRET are set, so the picker can search. */
+  vendorsEnabled?: boolean;
 }) {
   const { state, pending, onSubmit, formRef, errors } = useMobilityForm(action);
   const v = initial;
@@ -352,6 +361,16 @@ export function TripForm({
           defaultCurrency={v?.costCurrency ?? homeCurrency}
           errors={errors}
         />
+        {vendorsEnabled || vendor ? (
+          <VendorPicker
+            name="vendorRefId"
+            label="Vendor"
+            initial={vendor}
+            search={searchVendors}
+            link={linkVendor}
+            error={errors.vendorRefId}
+          />
+        ) : null}
         <TextAreaField name="notes" label="Notes" maxLength={2000} defaultValue={v?.notes} error={errors.notes} />
       </section>
 

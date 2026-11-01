@@ -1,10 +1,10 @@
 import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
-import { journeys, places, vehicles } from "@/db/schema";
+import { journeys, places, vehicles, vendorRefs } from "@/db/schema";
 import type { OwnedIdLoader, RefKind } from "./ownership";
 
-const TABLES = { vehicle: vehicles, place: places, journey: journeys } as const;
+const TABLES = { vehicle: vehicles, place: places, journey: journeys, vendor: vendorRefs } as const;
 
 /** The database-backed loader for verifyOwnedRefs: ids of `kind` that `userId` owns. */
 export function ownedIdLoader(userId: string): OwnedIdLoader {

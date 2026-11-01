@@ -15,6 +15,9 @@ export const VENDOR_SEARCH_DEBOUNCE_MS = 300;
  *
  * In a form, pass `name`: the picked ref id goes in a hidden input of that name. On the Vendors
  * page, `link` is the add action, which opens the new vendor's page.
+ *
+ * `onLinked` hears each successful pick, with what CentenarianOS says about the vendor, so the trip
+ * form can fill its empty fields from it (lib/mobility/vendor-fill.ts).
  */
 export function VendorPicker({
   name,
@@ -22,6 +25,7 @@ export function VendorPicker({
   initial,
   search,
   link,
+  onLinked,
   error,
 }: {
   name?: string;
@@ -29,6 +33,7 @@ export function VendorPicker({
   initial: { refId: string; label: string } | null;
   search: (q: string) => Promise<VendorSearchResult>;
   link: (contactId: string, locationId: string | null) => Promise<LinkVendorResult>;
+  onLinked?: (linked: Extract<LinkVendorResult, { ok: true }>) => void;
   error?: string;
 }) {
   const id = useId();
@@ -73,6 +78,7 @@ export function VendorPicker({
       setPicked({ refId: linked.refId, label: linked.label });
       setOpen(false);
       setQuery("");
+      onLinked?.(linked);
     });
   };
 

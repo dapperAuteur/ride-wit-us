@@ -6,3 +6,4 @@ export * from "./vendors";
 export * from "./journeys";
 export * from "./trips";
 export * from "./waitlist";
+export * from "./projections";

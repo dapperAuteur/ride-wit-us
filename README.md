@@ -40,7 +40,8 @@ app/
   episodes/             catalog + episode detail (32 episodes, statically generated)
   seasons/[n]/          season pages (4)
   app/                  the signed-in mobility app: dashboard, trips and multi-leg itineraries (flights,
-                        lodging), vehicles, saved places, settings (units, currency, time zone)
+                        lodging), vehicles, saved places, vendors (picked from CentenarianOS), settings
+                        (units, currency, time zone)
   waitlist/             public waitlist for the mobility app (static page)
   api/waitlist/         POST: validates, rate-limits, stores, emails new signups a confirmation, notifies BAM in WitUS Inbox
   signin/               the only door in — "Sign in with WitUS" / "Continue as <name>"
@@ -62,6 +63,8 @@ lib/
                         places), owner checks for every referenced id, per-currency subtotals, time zones,
                         itinerary grouping
   waitlist/             waitlist validation, the Inbox submission shape, the confirmation email
+  signed/               X-Witus-* signing and checking for server-to-server calls (shared test vectors)
+  centos/               signed client for CentenarianOS: vendors (E1 to E3), problems in plain words
   witus-sender.ts       Inbox/Outbox wrapper: env, stubbing, pre-flight schema check (witus-contracts.ts)
   sender-inbox.ts       canonical WitUS Inbox sender, copied verbatim from witus-inbox
   sender-outbox.ts      canonical WitUS Outbox sender, copied verbatim from witus-outbox
@@ -142,10 +145,29 @@ body.
 ## Integration with CentenarianOS
 
 **Today:** none at the data level. RideWitUS now has a database and, at `/app`, screens for vehicles, trips
-(every mode, flights included), multi-leg trips with lodging stays, and saved places (Phase 1a). Nothing is
-sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
+(every mode, flights included), multi-leg trips with lodging stays, and saved places (Phase 1a). Vendors
+(Phase 1f) are read live from CentenarianOS over the signed vendors API: `/app/vendors` searches your
+CentenarianOS vendor contacts and links one (RideWitUS stores only a `vendor_refs` pointer, never a name,
+address or price), each vendor's page shows your trips there and the prices you recorded in CentenarianOS,
+and the trip form has a Vendor field. RideWitUS never creates vendors; "Not listed?" opens CentenarianOS's
+own new-vendor form. Without `CENTOS_API_URL` and `RIDE_VENDOR_API_SECRET` the vendor screens say they are
+not switched on. A WitUS account that has never signed in to CentenarianOS sees "Connect CentenarianOS".
+Nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
 maintenance until the Stage 4 migration. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
+
+**Signed server-to-server calls (CentenarianOS plan 70, wave 1).** The endpoints and events between
+RideWitUS, CentenarianOS and Work.WitUS are specified in CentenarianOS's tracked contract,
+`centenarian-os/docs/integrations/ridewitus-contract.md`. This repo's side of the wire format lives in
+[`lib/signed/`](./lib/signed/): `signature.ts` (sign and verify; a GET signs its path plus query exactly
+as sent, a POST its raw body; 300-second window, past and future), `receiver.ts` (per-endpoint secrets
+and the one sender each endpoint accepts; unset secret = 503 `not_configured`), `client.ts` (signed GET
+and POST with a timeout) and `rejected.ts` (reads per-row refusals from an event batch answer).
+[`lib/centos/client.ts`](./lib/centos/client.ts) calls CentenarianOS with `CENTOS_API_URL` and one secret
+per endpoint (`RIDE_VENDOR_API_SECRET`, `RIDE_RESYNC_SECRET`), with a 4-second timeout. The signing test
+vectors in [`tests/fixtures/witus-signing-vectors.json`](./tests/fixtures/witus-signing-vectors.json) are a
+byte-identical copy of the CentenarianOS file, which is the source of truth: change it there and copy it
+here unchanged, so a signing drift between the two apps fails a test instead of a production request.
 
 **Proposed (decided 2026-08-27, not built):** RideWitUS grows a database and becomes the system of record
 for trips, rides, vehicles, fuel, maintenance, components, and cost per mile, taking over CentenarianOS's

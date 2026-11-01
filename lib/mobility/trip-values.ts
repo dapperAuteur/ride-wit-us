@@ -10,6 +10,7 @@ export interface StoredTrip {
   purpose: string | null;
   category: string;
   vehicleId: string | null;
+  vendorRefId: string | null;
   startDate: string;
   endDate: string | null;
   departedAt: Date | null;
@@ -42,6 +43,7 @@ export function tripFormValues(t: StoredTrip) {
     purpose: t.purpose,
     category: t.category,
     vehicleId: t.vehicleId,
+    vendorRefId: t.vendorRefId,
     startDate: t.startDate,
     endDate: t.endDate,
     departLocal: t.departedAt ? utcToZonedLocal(t.departedAt, t.departTz ?? "UTC") : null,

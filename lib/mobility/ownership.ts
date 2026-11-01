@@ -6,7 +6,7 @@
  */
 import { isUuid } from "./form-kit";
 
-export type RefKind = "vehicle" | "place" | "journey";
+export type RefKind = "vehicle" | "place" | "journey" | "vendor";
 
 /** Returns the subset of `ids` that belong to the current owner. */
 export type OwnedIdLoader = (kind: RefKind, ids: string[]) => Promise<Set<string>>;
@@ -34,4 +34,5 @@ export const REF_MESSAGES: Record<RefKind, string> = {
   vehicle: "That vehicle isn't in your garage. Pick one from the list.",
   place: "That place isn't one of your saved places. Pick one from the list.",
   journey: "That trip isn't yours. Open it from your trips list.",
+  vendor: "That vendor isn't linked to your account. Pick it again from the list.",
 };

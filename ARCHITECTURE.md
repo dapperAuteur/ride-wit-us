@@ -134,6 +134,8 @@ curl -X POST https://ridewitus.witus.online/api/outbox/publish \
 /app/journeys/new               plan a multi-leg trip
 /app/journeys/[id]              itinerary (legs + stays in order); /edit; /stays/new; /stays/[stayId]
 /app/places                     saved places with aliases; /new, /[id] edit + delete
+/app/vendors                    vendors linked from CentenarianOS (signed vendors API, read live, never cached);
+                                search and link one; /[id] details, your trips there, CentOS prices, remove link
 /api/auth/witus/authorize       GET  starts the OIDC code flow (state + PKCE)
 /api/auth/witus/callback        GET  finishes it and mints the session cookie
 /api/auth/signout               POST destroys the local session (303 to /, or 200 JSON)
@@ -187,6 +189,9 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `DATABASE_URL` (or `STORAGE_DATABASE_URL`) | For mobility | — | Pooled Neon connection string. Unset ⇒ `/app` shows "not switched on", `/api/waitlist` returns 503, the build still passes |
 | `DATABASE_URL_UNPOOLED` (or `STORAGE_DATABASE_URL_UNPOOLED`) | Migrations only | — | Direct Neon URL for `pnpm db:migrate:prod`, exported in BAM's shell, never committed |
 | `RATE_LIMIT_SALT` | Recommended | — | HMAC key for rate-limit bucket keys so stored keys cannot be reversed to IPs |
+| `CENTOS_API_URL` | For CentenarianOS features | — | CentenarianOS base URL (its primary domain in its Vercel project). No default: unset ⇒ calls answer `not_configured` and make no request |
+| `RIDE_VENDOR_API_SECRET` | For vendors | — | Signs calls to CentenarianOS `GET /api/v1/ride/vendors…`. Same value as on CentenarianOS; `openssl rand -hex 32` |
+| `RIDE_RESYNC_SECRET` | For Sync now | — | Signs `POST /api/v1/ride/resync` to CentenarianOS. Same value as on CentenarianOS |
 | `SENTRY_DSN` | No | — | Better Stack ingest DSN for server + edge errors. Unset ⇒ the SDK never initializes |
 | `NEXT_PUBLIC_SENTRY_DSN` | No | — | Same source, browser side. Inlined at build time |
 | `SENTRY_ENVIRONMENT` | No | `VERCEL_ENV` → `NODE_ENV` | Label on every event |

@@ -12,7 +12,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { HeaderAccount } from "@/components/header-account";
-import { APP_LINKS, isCurrentLink, readSessionProbe, sectionLinks } from "@/components/header-links";
+import {
+  APP_LINKS,
+  isCurrentLink,
+  readSessionAccount,
+  readSessionProbe,
+  safeEndSessionUrl,
+  sectionLinks,
+} from "@/components/header-links";
 import { HEADER_THEMES, SiteHeader } from "@/components/site-header";
 
 const SIGN_IN_LINK = /<a [^>]*href="\/signin"[^>]*>Sign in<\/a>/;
@@ -126,5 +133,89 @@ describe("readSessionProbe", () => {
     for (const body of [{ signedIn: false }, { signedIn: "true" }, {}, null, undefined, "ok", 1]) {
       expect(readSessionProbe(body)).toBe(false);
     }
+  });
+});
+
+const END_SESSION =
+  "https://accounts.witus.online/api/idp/oauth2/endsession?client_id=witus-ride" +
+  "&post_logout_redirect_uri=https%3A%2F%2Fride.witus.online%2F";
+const EVERYWHERE = /<button type="button"[^>]*>Sign out of WitUS everywhere<\/button>/g;
+
+describe("\"Sign out of WitUS everywhere\" beside Sign out in the header (BAM, 2026-11-01)", () => {
+  it("renders in the bar from lg up, the second row from md to lg, and the Menu's Account group", () => {
+    const html = renderToStaticMarkup(<SiteHeader signedIn endSessionUrl={END_SESSION} />);
+    const buttons = html.match(EVERYWHERE) ?? [];
+    expect(buttons).toHaveLength(3);
+    // Bar: hidden below lg, shown from lg.
+    const bar = buttons.find((b) => /\blg:inline-flex\b/.test(b));
+    expect(bar).toBeTruthy();
+    expect(bar).toMatch(/\bhidden\b/);
+    // Menu: an Account group with the local Sign out form next to the everywhere control.
+    const account = html.match(/<section aria-label="Account">[\s\S]*?<\/section>/)?.[0] ?? "";
+    expect(account).toMatch(/<form action="\/api\/auth\/signout" method="post">/);
+    expect(account).toMatch(/<button type="submit"[^>]*>Sign out<\/button>/);
+    expect(account).toMatch(EVERYWHERE);
+    expect(account).toContain("Also signs you out of WitUS.");
+  });
+
+  it("describes every copy with the help text", () => {
+    const html = renderToStaticMarkup(<SiteHeader signedIn endSessionUrl={END_SESSION} />);
+    for (const button of html.match(EVERYWHERE) ?? []) {
+      const id = button.match(/aria-describedby="([^"]+)"/)?.[1];
+      expect(id).toBeTruthy();
+      expect(html).toMatch(new RegExp(`<span id="${id}"[^>]*>Also signs you out of WitUS\\.`));
+    }
+  });
+
+  it("keeps the bar's Sign out a plain local form, never the IdP URL", () => {
+    const html = renderToStaticMarkup(<SiteHeader signedIn endSessionUrl={END_SESSION} />);
+    const form = html.match(/<form[^>]*>[\s\S]*?<\/form>/)?.[0] ?? "";
+    expect(form).toMatch(/action="\/api\/auth\/signout"/);
+    expect(form).not.toContain("endsession");
+  });
+
+  it("does not render when SSO is not configured (null) or nobody is signed in", () => {
+    expect(renderToStaticMarkup(<SiteHeader signedIn endSessionUrl={null} />)).not.toContain("WitUS everywhere");
+    expect(renderToStaticMarkup(<SiteHeader signedIn endSessionUrl={null} />)).not.toContain('aria-label="Account"');
+    expect(renderToStaticMarkup(<SiteHeader />)).not.toContain("WitUS everywhere");
+    expect(renderToStaticMarkup(<SiteHeader signedIn={false} endSessionUrl={END_SESSION} />)).not.toContain(
+      "WitUS everywhere"
+    );
+  });
+
+  it("stays reachable for a rider the app cannot serve yet (no app links)", () => {
+    const html = renderToStaticMarkup(<SiteHeader signedIn appNav={false} endSessionUrl={END_SESSION} />);
+    expect(html).not.toContain('href="/app/trips"');
+    expect((html.match(EVERYWHERE) ?? []).length).toBe(3);
+  });
+
+  it("is passed to the header by the app layout and /signed-in", () => {
+    for (const file of ["../app/app/layout.tsx", "../app/signed-in/page.tsx"]) {
+      const source = readFileSync(new URL(file, import.meta.url), "utf8");
+      expect(source, file).toMatch(/<SiteHeader[\s\S]*?endSessionUrl=\{endSessionUrl\}/);
+    }
+  });
+});
+
+describe("readSessionAccount", () => {
+  it("returns the end-session URL only for a signed-in visitor with an http(s) URL", () => {
+    expect(readSessionAccount({ signedIn: true, endSessionUrl: END_SESSION })).toEqual({
+      signedIn: true,
+      endSessionUrl: END_SESSION,
+    });
+    expect(readSessionAccount({ signedIn: true, endSessionUrl: null })).toEqual({ signedIn: true, endSessionUrl: null });
+    expect(readSessionAccount({ signedIn: true })).toEqual({ signedIn: true, endSessionUrl: null });
+    expect(readSessionAccount({ signedIn: false, endSessionUrl: END_SESSION })).toEqual({
+      signedIn: false,
+      endSessionUrl: null,
+    });
+    expect(readSessionAccount(null)).toEqual({ signedIn: false, endSessionUrl: null });
+  });
+
+  it("refuses anything that is not an absolute http(s) URL", () => {
+    for (const bad of ["javascript:alert(1)", "/oauth2/endsession", "", 42, {}, "data:text/html,x"]) {
+      expect(safeEndSessionUrl(bad)).toBeNull();
+    }
+    expect(safeEndSessionUrl(END_SESSION)).toBe(END_SESSION);
   });
 });

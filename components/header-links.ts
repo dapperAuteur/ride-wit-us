@@ -50,8 +50,21 @@ export const OPEN_APP_LABEL = "Open the app";
 export const OPEN_APP_SHORT_LABEL = "App";
 export const APP_HREF = "/app";
 
-/** Answers `{ signedIn: boolean }` from the server's session check (app/api/auth/session). */
+/**
+ * Answers `{ signedIn: boolean, endSessionUrl: string | null }` from the server's session check
+ * (app/api/auth/session). `endSessionUrl` is set only when someone is signed in and this app is a
+ * configured WitUS OIDC client: it is what "Sign out of WitUS everywhere" navigates to.
+ */
 export const SESSION_PROBE_URL = "/api/auth/session";
+
+/** What the header knows about the visitor's session. */
+export interface SessionProbe {
+  signedIn: boolean;
+  /** The IdP's RP-initiated logout URL, or null (signed out, or SSO not configured here). */
+  endSessionUrl: string | null;
+}
+
+export const SIGNED_OUT: SessionProbe = { signedIn: false, endSessionUrl: null };
 
 /**
  * Read the probe's body. Anything but an explicit `signedIn: true` (an error page, a network
@@ -63,4 +76,25 @@ export function readSessionProbe(body: unknown): boolean {
     body !== null &&
     (body as { signedIn?: unknown }).signedIn === true
   );
+}
+
+/**
+ * Accept an end-session URL only when it is an absolute http(s) URL. The value comes from our own
+ * server, but it ends up in `window.location.assign`, so anything else (a `javascript:` URL, a
+ * relative path, garbage) reads as "no everywhere control" rather than being followed.
+ */
+export function safeEndSessionUrl(value: unknown): string | null {
+  if (typeof value !== "string" || value.length === 0) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Read the whole probe body. Signed out (or unreadable) always means no end-session URL. */
+export function readSessionAccount(body: unknown): SessionProbe {
+  if (!readSessionProbe(body)) return SIGNED_OUT;
+  return { signedIn: true, endSessionUrl: safeEndSessionUrl((body as { endSessionUrl?: unknown }).endSessionUrl) };
 }

@@ -147,6 +147,19 @@ sent to CentenarianOS yet, and CentenarianOS's travel module still holds the exi
 maintenance until the Stage 4 migration. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
 
+**Signed server-to-server calls (CentenarianOS plan 70, wave 1).** The endpoints and events between
+RideWitUS, CentenarianOS and Work.WitUS are specified in CentenarianOS's tracked contract,
+`centenarian-os/docs/integrations/ridewitus-contract.md`. This repo's side of the wire format lives in
+[`lib/signed/`](./lib/signed/): `signature.ts` (sign and verify; a GET signs its path plus query exactly
+as sent, a POST its raw body; 300-second window, past and future), `receiver.ts` (per-endpoint secrets
+and the one sender each endpoint accepts; unset secret = 503 `not_configured`), `client.ts` (signed GET
+and POST with a timeout) and `rejected.ts` (reads per-row refusals from an event batch answer).
+[`lib/centos/client.ts`](./lib/centos/client.ts) calls CentenarianOS with `CENTOS_API_URL` and one secret
+per endpoint (`RIDE_VENDOR_API_SECRET`, `RIDE_RESYNC_SECRET`), with a 4-second timeout. The signing test
+vectors in [`tests/fixtures/witus-signing-vectors.json`](./tests/fixtures/witus-signing-vectors.json) are a
+byte-identical copy of the CentenarianOS file, which is the source of truth: change it there and copy it
+here unchanged, so a signing drift between the two apps fails a test instead of a production request.
+
 **Proposed (decided 2026-08-27, not built):** RideWitUS grows a database and becomes the system of record
 for trips, rides, vehicles, fuel, maintenance, components, and cost per mile, taking over CentenarianOS's
 travel module (decomposition Stage 4). RideWitUS pushes signed summaries (trip activity, planned-trip

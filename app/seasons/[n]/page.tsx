@@ -36,7 +36,7 @@ export default async function SeasonPage({ params }: PageProps) {
         <header className="border-b-4 border-dashed border-[#221E1B]">
           <div className="max-w-5xl mx-auto px-6 py-16">
             <span className="sticker px-3 py-1 text-xs uppercase tracking-wider rotate-[-1deg] inline-block mb-4" style={{ background: stickerColor }}>Season {num}</span>
-            <h1 className="font-display text-6xl sm:text-7xl tracking-tight text-[#221E1B] leading-[0.95]">{meta.title}</h1>
+            <h1 className="font-display text-5xl min-[400px]:text-6xl sm:text-7xl tracking-tight text-[#221E1B] leading-[0.95] [overflow-wrap:anywhere] hyphens-auto">{meta.title}</h1>
             <p className="font-display text-xl mt-3" style={{ color: APRON_COLORS[meta.apronLevels[0]] }}>{meta.tagline}</p>
             <p className="mt-6 max-w-2xl text-[#221E1B] leading-relaxed">{meta.description}</p>
             <div className="mt-6 flex flex-wrap gap-2">

@@ -21,6 +21,26 @@ export function sectionLinks(basePath = ""): HeaderLink[] {
   ];
 }
 
+/**
+ * The signed-in app's destinations. One list for the public header and the app layout, so a
+ * signed-in rider sees the same app links on the podcast pages and inside /app.
+ */
+export const APP_LINKS: readonly HeaderLink[] = [
+  { href: "/app", label: "Dashboard" },
+  { href: "/app/trips", label: "Trips" },
+  { href: "/app/vehicles", label: "Vehicles" },
+  { href: "/app/places", label: "Places" },
+  { href: "/app/vendors", label: "Vendors" },
+  { href: "/app/settings", label: "Settings" },
+];
+
+/** Is `href` the current section? Dashboard matches only itself; the rest match their subpages. */
+export function isCurrentLink(pathname: string | null, href: string): boolean {
+  if (!pathname) return false;
+  if (href === "/app") return pathname === "/app";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 /** Shared UI rule (witus docs/shared-ui-ux-dx.md, "Sign-in control"): accessible name exactly this. */
 export const SIGN_IN_LABEL = "Sign in";
 export const SIGN_IN_HREF = "/signin";

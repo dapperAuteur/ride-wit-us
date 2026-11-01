@@ -3,29 +3,38 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import type { HeaderLink } from "@/components/header-links";
+import { APP_LINKS, isCurrentLink, type HeaderLink } from "@/components/header-links";
+import { useSignedIn } from "@/components/header-session";
 import { cn } from "@/lib/utils";
 
 /**
- * The section links below the `md` breakpoint. Four links plus the wordmark plus Sign in do not
- * fit at 320px, so the section links move in here and the account control stays in the bar,
- * never behind this menu (witus docs/shared-ui-ux-dx.md, "Sign-in control"). Same shape as
- * witus.online's components/HeaderMenu.tsx: closes on Escape (focus back to the button), on a
- * link tap, and on navigation.
+ * Everything below the `md` breakpoint that does not fit in the bar: the podcast links and, when
+ * someone is signed in, the app's destinations. The account control (Sign in, or the app link and
+ * Sign out) stays in the bar, never in here (witus docs/shared-ui-ux-dx.md, "Sign-in control").
+ * Same shape as witus.online's components/HeaderMenu.tsx: closes on Escape (focus back to the
+ * button), on a link tap, and on navigation.
  */
 export function HeaderMenu({
   links,
+  appNav,
+  signedIn: known,
   buttonClass,
   panelClass,
   itemClass,
+  headingClass,
 }: {
   links: HeaderLink[];
+  /** Show the app's destinations to a signed-in visitor. */
+  appNav: boolean;
+  signedIn?: boolean;
   buttonClass: string;
   panelClass: string;
   itemClass: string;
+  headingClass: string;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const signedIn = useSignedIn(known);
   const panelId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -49,6 +58,10 @@ export function HeaderMenu({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  const groups: { heading: string; links: readonly HeaderLink[] }[] = [];
+  if (signedIn && appNav) groups.push({ heading: "App", links: APP_LINKS });
+  groups.push({ heading: "Podcast", links });
+
   return (
     <div className="md:hidden">
       <button
@@ -62,15 +75,31 @@ export function HeaderMenu({
         {open ? "Close" : "Menu"}
       </button>
       <div id={panelId} hidden={!open} className={cn("absolute left-0 right-0 top-full z-40", panelClass)}>
-        <ul className="max-w-5xl mx-auto py-2">
-          {links.map((l) => (
-            <li key={l.href}>
-              <Link href={l.href} className={itemClass} onClick={() => setOpen(false)}>
-                {l.label}
-              </Link>
-            </li>
+        <div className="max-w-5xl mx-auto py-2">
+          {groups.map((g) => (
+            <section key={g.heading} aria-label={g.heading}>
+              {groups.length > 1 ? (
+                <p aria-hidden="true" className={headingClass}>
+                  {g.heading}
+                </p>
+              ) : null}
+              <ul>
+                {g.links.map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      aria-current={isCurrentLink(pathname, l.href) ? "page" : undefined}
+                      className={itemClass}
+                      onClick={() => setOpen(false)}
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );

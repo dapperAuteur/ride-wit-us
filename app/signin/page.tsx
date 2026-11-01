@@ -47,7 +47,7 @@ export default async function SignInPage({
 
   return (
     <>
-      <SiteHeader theme={HEADER_THEMES.chalk} />
+      <SiteHeader theme={HEADER_THEMES.chalk} signedIn={false} />
       <article className="flex-1">
         <section className="border-b-4 border-dashed border-[#221E1B]">
           <div className="max-w-xl mx-auto px-6 py-16">

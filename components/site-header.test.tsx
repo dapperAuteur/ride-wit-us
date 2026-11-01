@@ -7,11 +7,12 @@
  * No DOM test setup in this repo (vitest in node), so this renders to static HTML, which is also
  * what a statically prerendered page ships before the session probe runs.
  */
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { HeaderAccount } from "@/components/header-account";
-import { readSessionProbe, sectionLinks } from "@/components/header-links";
+import { APP_LINKS, isCurrentLink, readSessionProbe, sectionLinks } from "@/components/header-links";
 import { HEADER_THEMES, SiteHeader } from "@/components/site-header";
 
 const SIGN_IN_LINK = /<a [^>]*href="\/signin"[^>]*>Sign in<\/a>/;
@@ -70,6 +71,52 @@ describe("SiteHeader signed in", () => {
     const html = renderToStaticMarkup(<HeaderAccount linkClass="x" signedIn />);
     expect(html).toContain('href="/app"');
     expect(html).toContain(">Sign out</button>");
+  });
+});
+
+describe("the app's destinations in the header", () => {
+  it("lists every app link to a signed-in visitor, in the App row and in the phone menu", () => {
+    const html = renderToStaticMarkup(<SiteHeader signedIn />);
+    expect(html).toMatch(/<nav aria-label="App"/);
+    for (const { href, label } of APP_LINKS) {
+      const anchors = html.match(new RegExp(`<a [^>]*href="${href}"[^>]*>${label}</a>`, "g")) ?? [];
+      expect(anchors.length, label).toBe(2);
+    }
+    // The podcast links stay reachable alongside them.
+    for (const { href } of sectionLinks()) expect(html).toContain(`href="${href}"`);
+  });
+
+  it("shows no app links to a signed-out visitor", () => {
+    const html = renderToStaticMarkup(<SiteHeader />);
+    expect(html).not.toMatch(/<nav aria-label="App"/);
+    for (const { href } of APP_LINKS.filter((l) => l.href !== "/app")) expect(html).not.toContain(`href="${href}"`);
+  });
+
+  it("leaves the app links out when the app turns them off, but keeps the account control", () => {
+    const html = renderToStaticMarkup(<SiteHeader signedIn appNav={false} />);
+    expect(html).not.toContain('href="/app/trips"');
+    expect(html).toContain(">Sign out</button>");
+  });
+
+  it("marks the current section", () => {
+    expect(isCurrentLink("/app", "/app")).toBe(true);
+    expect(isCurrentLink("/app/trips", "/app")).toBe(false);
+    expect(isCurrentLink("/app/trips/abc", "/app/trips")).toBe(true);
+    expect(isCurrentLink("/app/tripsx", "/app/trips")).toBe(false);
+    expect(isCurrentLink(null, "/app")).toBe(false);
+  });
+});
+
+describe("the app layout uses the same header", () => {
+  const source = readFileSync(new URL("../app/app/layout.tsx", import.meta.url), "utf8");
+
+  it("renders SiteHeader signed in, with the app row only when the app can serve the rider", () => {
+    expect(source).toMatch(/<SiteHeader[^>]*\bsignedIn\b/);
+    expect(source).toMatch(/appNav=\{ctx\.state === "ok"\}/);
+  });
+
+  it("keeps \"Sign out of WitUS everywhere\" reachable inside the app", () => {
+    expect(source).toContain("<SignOutEverywhereButton");
   });
 });
 

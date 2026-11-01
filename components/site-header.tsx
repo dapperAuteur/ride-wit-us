@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HeaderAccount } from "@/components/header-account";
+import { HeaderAppNav } from "@/components/header-app-nav";
 import { sectionLinks } from "@/components/header-links";
 import { HeaderMenu } from "@/components/header-menu";
 import { APP_NAME } from "@/lib/site-meta";
@@ -28,6 +29,12 @@ interface SiteHeaderProps {
    * control asks /api/auth/session after load and shows "Sign in" until it hears otherwise.
    */
   signedIn?: boolean;
+  /**
+   * Show the app's destinations (Dashboard, Trips, Vehicles, Places, Vendors, Settings) to a
+   * signed-in visitor: a second row from `md` up, a Menu group below it. The app layout turns it
+   * off for a rider the app cannot serve yet (no database, waitlisted).
+   */
+  appNav?: boolean;
 }
 
 // 44px targets (min-h-11) and a visible focus ring on every control in the bar.
@@ -35,11 +42,12 @@ const CONTROL =
   "inline-flex items-center whitespace-nowrap min-h-11 px-2 sm:px-3 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded";
 
 /**
- * The public header. The account control (Sign in, or Open the app + Sign out) is in the bar at
- * every width; below `md` the four section links move behind a Menu button so the bar fits at
- * 320px without sideways scroll (witus docs/shared-ui-ux-dx.md, "Sign-in control").
+ * The site header, on the podcast pages and inside /app. The account control (Sign in, or Open the
+ * app + Sign out) is in the bar at every width. Signed in, a second row carries the app's
+ * destinations. Below `md` the podcast links and the app links move behind a Menu button so the
+ * bar fits at 320px without sideways scroll (witus docs/shared-ui-ux-dx.md, "Sign-in control").
  */
-export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn }: SiteHeaderProps) {
+export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn, appNav = true }: SiteHeaderProps) {
   const links = sectionLinks(basePath);
   const control = cn(CONTROL, theme.link);
 
@@ -72,15 +80,21 @@ export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn }: Si
           <HeaderAccount linkClass={control} signedIn={signedIn} />
           <HeaderMenu
             links={links}
+            appNav={appNav}
+            signedIn={signedIn}
             buttonClass={control}
             panelClass={cn(theme.surface, theme.border)}
             itemClass={cn(
               "flex items-center min-h-11 px-4 sm:px-6 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:-outline-offset-2",
               theme.link
             )}
+            headingClass="px-4 sm:px-6 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider opacity-70"
           />
         </nav>
       </div>
+      {appNav ? (
+        <HeaderAppNav signedIn={signedIn} linkClass={control} currentClass="font-semibold underline underline-offset-4" />
+      ) : null}
     </header>
   );
 }

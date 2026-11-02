@@ -35,6 +35,13 @@ interface SiteHeaderProps {
    * off for a rider the app cannot serve yet (no database, waitlisted).
    */
   appNav?: boolean;
+  /**
+   * The IdP logout URL for "Sign out of WitUS everywhere" (lib/witus-sso-config.ts
+   * `witusEndSessionUrl`), from a page that renders per request. null = not a configured WitUS
+   * client, so the control does not render. Left out on the public pages: the session probe
+   * supplies it.
+   */
+  endSessionUrl?: string | null;
 }
 
 // 44px targets (min-h-11) and a visible focus ring on every control in the bar.
@@ -44,10 +51,18 @@ const CONTROL =
 /**
  * The site header, on the podcast pages and inside /app. The account control (Sign in, or Open the
  * app + Sign out) is in the bar at every width. Signed in, a second row carries the app's
- * destinations. Below `md` the podcast links and the app links move behind a Menu button so the
+ * destinations, and "Sign out of WitUS everywhere" sits beside "Sign out": in the bar from `lg`
+ * up, at the right end of the second row from `md` to `lg`, and in the Menu's Account group below
+ * `md` (BAM, 2026-11-01). Below `md` the podcast links and the app links move behind a Menu button so the
  * bar fits at 320px without sideways scroll (witus docs/shared-ui-ux-dx.md, "Sign-in control").
  */
-export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn, appNav = true }: SiteHeaderProps) {
+export function SiteHeader({
+  theme = defaultTheme,
+  basePath = "",
+  signedIn,
+  appNav = true,
+  endSessionUrl,
+}: SiteHeaderProps) {
   const links = sectionLinks(basePath);
   const control = cn(CONTROL, theme.link);
 
@@ -77,11 +92,12 @@ export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn, appN
               {l.label}
             </Link>
           ))}
-          <HeaderAccount linkClass={control} signedIn={signedIn} />
+          <HeaderAccount linkClass={control} signedIn={signedIn} endSessionUrl={endSessionUrl} />
           <HeaderMenu
             links={links}
             appNav={appNav}
             signedIn={signedIn}
+            endSessionUrl={endSessionUrl}
             buttonClass={control}
             panelClass={cn(theme.surface, theme.border)}
             itemClass={cn(
@@ -92,9 +108,13 @@ export function SiteHeader({ theme = defaultTheme, basePath = "", signedIn, appN
           />
         </nav>
       </div>
-      {appNav ? (
-        <HeaderAppNav signedIn={signedIn} linkClass={control} currentClass="font-semibold underline underline-offset-4" />
-      ) : null}
+      <HeaderAppNav
+        signedIn={signedIn}
+        endSessionUrl={endSessionUrl}
+        showLinks={appNav}
+        linkClass={control}
+        currentClass="font-semibold underline underline-offset-4"
+      />
     </header>
   );
 }

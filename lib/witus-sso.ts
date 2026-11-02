@@ -159,6 +159,8 @@ export function witusPostLogoutRedirectUri(siteUrl: string): string {
  */
 export const SIGN_OUT_LABEL = "Sign out";
 export const SIGN_OUT_EVERYWHERE_LABEL = "Sign out of WitUS everywhere";
+/** Shown on the everywhere control while the local sign-out runs, before the IdP hand-off. */
+export const SIGNING_OUT_LABEL = "Signing out…";
 export const SIGN_OUT_EVERYWHERE_HELP =
   "Also signs you out of WitUS. Other WitUS apps you are signed in to stay signed in until you sign out of them.";
 

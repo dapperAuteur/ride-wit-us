@@ -24,7 +24,7 @@ export default function HomePage() {
             <div className="flex items-start gap-4 mb-4">
               <span className="sticker px-3 py-1 text-xs uppercase tracking-wider rotate-[-2deg]">Indianapolis</span>
             </div>
-            <h1 className="font-display text-6xl sm:text-8xl tracking-tight text-[#221E1B] leading-[0.9]">
+            <h1 className="font-display text-5xl min-[360px]:text-6xl sm:text-8xl tracking-tight text-[#221E1B] leading-[0.9]">
               <span className="block">Community</span>
               <span className="block" style={{ color: "#D33E2D" }}>bike school</span>
               <span className="block">for the rest of us.</span>
@@ -54,16 +54,19 @@ export default function HomePage() {
           <div className="max-w-5xl mx-auto px-6 py-16">
             <h2 className="font-display text-4xl text-[#221E1B] mb-2">Four seasons.</h2>
             <p className="text-[#5b4d2c] mb-10 max-w-2xl">Apron-first, because the apron is what the job teaches.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* One column on phones, two from sm, four from lg: the longest title ("Program Operations &
+                Community", font-display 2xl) cannot fit a quarter of the row below lg, and a word that
+                does not fit pushes the page sideways (338px at 320, 650px at 640 before this). */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {SEASONS.map((s, i) => (
                 <Link
                   key={s.number}
                   href={`/episodes#season-${s.number}`}
-                  className="block border-4 border-[#221E1B] p-5 transition-transform hover:rotate-[-1deg] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#221E1B]"
+                  className="block min-w-0 border-4 border-[#221E1B] p-5 transition-transform hover:rotate-[-1deg] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#221E1B]"
                   style={{ background: `${STICKER_COLORS[i]}33`, boxShadow: "6px 6px 0 #221E1B" }}
                 >
                   <p className="font-mono text-[11px] uppercase tracking-wider text-[#221E1B]/60">Season {s.number}</p>
-                  <p className="font-display text-2xl font-bold text-[#221E1B] leading-[0.95] mt-1">{s.title}</p>
+                  <p className="font-display text-2xl font-bold text-[#221E1B] leading-[0.95] mt-1 [overflow-wrap:anywhere] hyphens-auto">{s.title}</p>
                   <p className="text-xs text-[#221E1B]/80 mt-3">{MONON_SEASON_TAGLINES[s.number]}</p>
                 </Link>
               ))}

@@ -20,9 +20,11 @@ export const metadata: Metadata = {
  * app can serve this rider (state "ok"); a waitlisted rider or an unprovisioned database gets the
  * top row and the gate page.
  *
- * "Sign out of WitUS everywhere" needs its help text beside it, which the header has no room for,
- * so it sits in the account strip at the foot of every app page (BAM, 2026-10-29, witus task 128
- * option (b): "Sign out" ends this app's session only; the everywhere control also ends WitUS's).
+ * "Sign out of WitUS everywhere" is in two places (BAM, 2026-11-01): beside "Sign out" in the
+ * header (in the bar on wide screens, in the Menu's Account group on narrow ones), and in the
+ * account strip at the foot of every app page, with its help text visible. Same control, same
+ * behavior (witus task 128 option (b): "Sign out" ends this app's session only; the everywhere
+ * control also ends WitUS's).
  */
 export default async function MobilityLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getMobilityContext();
@@ -30,7 +32,12 @@ export default async function MobilityLayout({ children }: { children: React.Rea
 
   return (
     <div className="flex-1 flex flex-col bg-[#f4ecd8]">
-      <SiteHeader theme={HEADER_THEMES.chalk} signedIn appNav={ctx.state === "ok"} />
+      <SiteHeader
+        theme={HEADER_THEMES.chalk}
+        signedIn
+        appNav={ctx.state === "ok"}
+        endSessionUrl={endSessionUrl}
+      />
       <div className="flex-1 max-w-5xl w-full mx-auto px-6 py-10">{children}</div>
       <section
         aria-label="Account"

@@ -69,6 +69,9 @@ importers:
       eslint-config-next:
         specifier: 16.4.1
         version: 16.4.1(@typescript-eslint/parser@8.71.1(eslint@9.39.5(jiti@1.21.7))(typescript@5.8.2))(eslint@9.39.5(jiti@1.21.7))(typescript@5.8.2)
+      playwright-core:
+        specifier: 1.62.1
+        version: 1.62.1
       postcss:
         specifier: ^8
         version: 8.5.25
@@ -3188,6 +3191,11 @@ packages:
   pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
+
+  playwright-core@1.62.1:
+    resolution: {integrity: sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -6714,6 +6722,8 @@ snapshots:
   pify@2.3.0: {}
 
   pirates@4.0.7: {}
+
+  playwright-core@1.62.1: {}
 
   possible-typed-array-names@1.1.0: {}
 

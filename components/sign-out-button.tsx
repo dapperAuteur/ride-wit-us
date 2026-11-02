@@ -5,6 +5,7 @@ import {
   SIGN_OUT_EVERYWHERE_HELP,
   SIGN_OUT_EVERYWHERE_LABEL,
   SIGN_OUT_LABEL,
+  SIGNING_OUT_LABEL,
   signOutEverywhere,
 } from "@/lib/witus-sso";
 
@@ -41,13 +42,44 @@ export function SignOutButton({ endSessionUrl = null }: { endSessionUrl?: string
 }
 
 /**
- * Ends this app's session, then the shared WitUS session at the IdP. ORDER IS THE SAFETY PROPERTY,
- * and it is the reason this control is client-side at all: the local session is destroyed and
- * AWAITED first (see `signOutEverywhere` in lib/witus-sso.ts), so if the IdP is unreachable,
- * refuses the request, or the redirect never completes, the person is still signed out HERE.
+ * What a click on any "Sign out of WitUS everywhere" control does: the account strip's button
+ * below, and the header's (components/header-sign-out-everywhere.tsx). One implementation, so the
+ * header and the strip cannot drift apart.
+ *
+ * ORDER IS THE SAFETY PROPERTY, and it is the reason this control is client-side at all: the local
+ * session is destroyed and AWAITED first (see `signOutEverywhere` in lib/witus-sso.ts), so if the
+ * IdP is unreachable, refuses the request, or the redirect never completes, the person is still
+ * signed out HERE.
  */
-export function SignOutEverywhereButton({ endSessionUrl }: { endSessionUrl: string }) {
+export function useSignOutEverywhere(endSessionUrl: string): { pending: boolean; start: () => void } {
   const [pending, setPending] = useState(false);
+  return {
+    pending,
+    start: () => {
+      setPending(true);
+      void signOutEverywhere({
+        // Local first. Everything after it is best-effort.
+        signOutLocal: () =>
+          fetch("/api/auth/signout", {
+            method: "POST",
+            headers: { accept: "application/json" },
+            cache: "no-store",
+          }),
+        // A full navigation, not a router push: this leaves our origin for the IdP, which then
+        // returns to the post_logout_redirect_uri already baked into the URL on the server
+        // (lib/witus-sso-config.ts). If that URI is not registered for this client the IdP
+        // keeps the visitor on its own page instead of coming back — signed out of both places
+        // either way.
+        navigate: (url) => window.location.assign(url),
+        endSessionUrl,
+      });
+    },
+  };
+}
+
+/** Ends this app's session, then the shared WitUS session at the IdP, with its help text below. */
+export function SignOutEverywhereButton({ endSessionUrl }: { endSessionUrl: string }) {
+  const { pending, start } = useSignOutEverywhere(endSessionUrl);
   const helpId = useId();
 
   return (
@@ -56,28 +88,10 @@ export function SignOutEverywhereButton({ endSessionUrl }: { endSessionUrl: stri
         type="button"
         disabled={pending}
         aria-describedby={helpId}
-        onClick={() => {
-          setPending(true);
-          void signOutEverywhere({
-            // Local first. Everything after it is best-effort.
-            signOutLocal: () =>
-              fetch("/api/auth/signout", {
-                method: "POST",
-                headers: { accept: "application/json" },
-                cache: "no-store",
-              }),
-            // A full navigation, not a router push: this leaves our origin for the IdP, which then
-            // returns to the post_logout_redirect_uri already baked into the URL on the server
-            // (lib/witus-sso-config.ts). If that URI is not registered for this client the IdP
-            // keeps the visitor on its own page instead of coming back — signed out of both places
-            // either way.
-            navigate: (url) => window.location.assign(url),
-            endSessionUrl,
-          });
-        }}
+        onClick={start}
         className={SECONDARY_BUTTON_CLASS}
       >
-        {pending ? "Signing out…" : SIGN_OUT_EVERYWHERE_LABEL}
+        {pending ? SIGNING_OUT_LABEL : SIGN_OUT_EVERYWHERE_LABEL}
       </button>
       <p id={helpId} className="mt-1 text-xs text-[#221E1B]/70">
         {SIGN_OUT_EVERYWHERE_HELP}

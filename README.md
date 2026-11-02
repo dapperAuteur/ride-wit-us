@@ -24,7 +24,7 @@ There *is* a login — **"Sign in with WitUS", and only that**. No password, no 
 
 For real form submissions to send confirmation/alert email, set `MAILGUN_API_KEY` in `.env.local`. Without it, [`lib/mailgun.ts`](./lib/mailgun.ts) logs would-be sends to stdout (and the waitlist confirmation email is skipped). Forms and waitlist signups are also forwarded to the WitUS Inbox, and `/api/outbox/publish` drafts social posts in the WitUS Outbox; both stay stubbed until their env is set. See [ARCHITECTURE.md § WitUS Inbox and Outbox](./ARCHITECTURE.md#witus-inbox-and-outbox). Other env vars documented in [ARCHITECTURE.md](./ARCHITECTURE.md#environment-variables).
 
-`pnpm test` runs the Vitest suite (the error-report scrubber, the health endpoint, the SSO helpers, the session token, the units library, the schema, mobility access and settings, the vehicle/trip/place/journey forms including unit conversion at the form boundary, the ownership guard, trip grouping and per-currency subtotals, the waitlist and its confirmation email, and the Inbox/Outbox bodies and signatures). `pnpm typecheck` and `pnpm lint` run tsc and ESLint. `pnpm db:generate` writes a Drizzle migration into `db/migrations/` without needing a database; `pnpm db:migrate:prod` applies migrations and is run by BAM only, with `DATABASE_URL_UNPOOLED` exported in his shell.
+`pnpm test` runs the Vitest suite (the error-report scrubber, the health endpoint, the SSO helpers, the session token, the units library, the schema, mobility access and settings, the vehicle/trip/place/journey forms including unit conversion at the form boundary, the ownership guard, trip grouping and per-currency subtotals, the waitlist and its confirmation email, and the Inbox/Outbox bodies and signatures). `pnpm typecheck` and `pnpm lint` run tsc and ESLint. `pnpm check:width` opens every public page at 320, 375, 640, 768 and 1024px in headless Chromium and fails if any page scrolls sideways; run it against `pnpm build && pnpm start` (or set `BASE_URL`), and see `scripts/check-page-width.mjs` for how it finds a browser. `pnpm db:generate` writes a Drizzle migration into `db/migrations/` without needing a database; `pnpm db:migrate:prod` applies migrations and is run by BAM only, with `DATABASE_URL_UNPOOLED` exported in his shell.
 
 Error monitoring goes to Better Stack over the Sentry protocol and is **off unless a DSN is set**. See [ARCHITECTURE.md § Error monitoring](./ARCHITECTURE.md#error-monitoring). Every event passes through [`lib/sentry-scrub.ts`](./lib/sentry-scrub.ts), which drops form bodies, contact details, location data, and credentials before anything is transmitted.
 
@@ -49,6 +49,8 @@ app/
   api/auth/witus/       OIDC authorize + callback (state + PKCE, claims from userinfo)
   api/auth/signout/     POST that destroys the local session
   api/health/           GET + HEAD liveness probe for uptime monitors
+  api/events/           POST receivers for CentenarianOS's signed events: envelope-balance, calendar-activity, finance-match
+  api/cron/outbox-drain/ GET (Vercel Cron, CRON_SECRET): sends due trip.summary / cost.recorded events to CentenarianOS
   api/inbox-ingest/     POST endpoint that sends Mailgun email per form_type, then forwards to WitUS Inbox
   api/outbox/publish/   POST (admin or bearer token): episode / season / ad hoc → WitUS Outbox drafts
   styleguide/           archive of the two non-chosen design directions (not in main nav)
@@ -152,7 +154,18 @@ address or price), each vendor's page shows your trips there and the prices you 
 and the trip form has a Vendor field. RideWitUS never creates vendors; "Not listed?" opens CentenarianOS's
 own new-vendor form. Without `CENTOS_API_URL` and `RIDE_VENDOR_API_SECRET` the vendor screens say they are
 not switched on. A WitUS account that has never signed in to CentenarianOS sees "Connect CentenarianOS".
-Nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
+CentenarianOS's events land in three receivers, `/api/events/envelope-balance` (savings-envelope balances),
+`/api/events/calendar-activity` (shared calendar events) and `/api/events/finance-match` (cost matches),
+each with its own secret (`ENVELOPE_BALANCE_EVENTS_SECRET`, `CALENDAR_ACTIVITY_EVENTS_SECRET`,
+`FINANCE_MATCH_EVENTS_SECRET`); they keep the latest state per event in `envelope_balances`,
+`calendar_activities` and `finance_matches` ([`lib/events/`](./lib/events/)). Nothing shows them on a
+screen yet (suggested trips are phase 2c). Going the other way, every trip save, edit and delete queues
+a `trip.summary` event (and a `cost.recorded` one when the trip has a cost) in `outbound_events`, in the
+same transaction as the write ([`lib/outbox/`](./lib/outbox/)); the queue drains right after the save
+and from a daily cron (`/api/cron/outbox-drain`, `CRON_SECRET`), signed with
+`MOBILITY_ACTIVITY_EVENTS_SECRET` / `MOBILITY_COST_EVENTS_SECRET` to `MOBILITY_ACTIVITY_EVENTS_URL` /
+`MOBILITY_COST_EVENTS_URL`. Until those are set the rows wait. Demo users never queue anything.
+Otherwise nothing is sent to CentenarianOS yet, and CentenarianOS's travel module still holds the existing history plus fuel and
 maintenance until the Stage 4 migration. The only shared pieces are
 "Sign in with WitUS" and the signed-webhook format in [`lib/witus-sender.ts`](./lib/witus-sender.ts).
 
@@ -195,6 +208,7 @@ lives in the local-only planning folder at `plans/future/PRD.md` (gitignored, so
 
 - `plans/future/PRD.md` (local-only, gitignored): product requirements for the mobility module and the CentenarianOS integration
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — tech stack, data flow, routing map, env vars
+- [docs/01-operations.md](./docs/01-operations.md) — post-deploy steps: the migrate workflow, its secret, the manual fallback, receiver hand checks
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — branch hygiene, commit style, dev workflow
 - [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) — community expectations
 - [SECURITY.md](./SECURITY.md) — vulnerability reporting

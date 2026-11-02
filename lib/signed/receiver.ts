@@ -31,8 +31,7 @@ export interface ReceiverSpec {
 
 /**
  * Every signed endpoint RideWitUS serves, with its secret and sender (contract table E5 to E7, E10).
- * The routes themselves arrive in later branches (plan 70: R-3 receivers, R-7 job travel); the names
- * live here now so the secret names cannot drift from the contract.
+ * E5 to E7 are served by app/api/events/* (plan 70 R-3, lib/events/inbound.ts); E10 arrives with R-7.
  */
 export const RECEIVERS = {
   envelopeBalance: { secretEnv: "ENVELOPE_BALANCE_EVENTS_SECRET", source: SOURCE.centenarianos },

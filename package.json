@@ -27,7 +27,7 @@
     "react-dom": "^19.2.4",
     "server-only": "^0.0.1",
     "tailwind-merge": "^2.5.5",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^22",

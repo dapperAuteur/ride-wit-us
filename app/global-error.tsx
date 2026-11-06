@@ -62,6 +62,17 @@ export default function GlobalError({
           >
             Try again
           </button>
+          {/* The root layout failed, so this minimal shell carries home and Sign in itself. */}
+          <p style={{ marginTop: 16, fontSize: 14 }}>
+            {/* A full reload is the point: the crashed layout must be fetched again. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/" style={{ color: "#1c1917", marginRight: 16 }}>
+              Back to home
+            </a>
+            <a href="/signin" style={{ color: "#1c1917" }}>
+              Sign in
+            </a>
+          </p>
           {error.digest ? (
             <p style={{ marginTop: 16, fontSize: 12, color: "#78716c" }}>
               Error ref: {error.digest}

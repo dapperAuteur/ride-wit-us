@@ -10,7 +10,8 @@
 //   MAILGUN_DOMAIN       — defaults to "mg.witus.online"
 //   MAILGUN_REGION       — "us" (default) or "eu"
 //   EMAIL_FROM           — From: header; defaults to "RideWitUS <noreply@${MAILGUN_DOMAIN}>"
-//   BAM_NOTIFY_EMAIL     — defaults to bam@awews.com (where form alerts go)
+//   BAM_NOTIFY_EMAIL     — where form alerts go; no default (this repository is public, so no address
+//                          lives in code); unset means alerts are logged, not sent
 //
 // Reference: https://documentation.mailgun.com/docs/mailgun/api-reference/openapi-final/tag/Messages/
 
@@ -40,7 +41,7 @@ function getConfig() {
   const region = (process.env.MAILGUN_REGION ?? "us").toLowerCase();
   const baseUrl = region === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
   const from = process.env.EMAIL_FROM ?? `RideWitUS <noreply@${domain}>`;
-  const bamNotifyEmail = process.env.BAM_NOTIFY_EMAIL ?? "bam@awews.com";
+  const bamNotifyEmail = process.env.BAM_NOTIFY_EMAIL?.trim() ?? "";
   return { apiKey, domain, baseUrl, from, bamNotifyEmail };
 }
 
@@ -51,6 +52,15 @@ export function mailConfigured(): boolean {
 
 export async function sendMail(message: MailgunMessage): Promise<MailgunResult> {
   const cfg = getConfig();
+
+  const addressed = (Array.isArray(message.to) ? message.to : [message.to]).map((t) => t.trim()).filter(Boolean);
+  if (addressed.length === 0) {
+    // BAM_NOTIFY_EMAIL (or another recipient) is unset: nothing to address the mail to. Log it instead
+    // of failing the form; the operations runbook lists the variable.
+    // eslint-disable-next-line no-console
+    console.warn("[mailgun] no recipient (is BAM_NOTIFY_EMAIL set?); not sent:", message.subject);
+    return { ok: true, stubbed: true };
+  }
 
   if (!cfg.apiKey) {
     // No API key in env — stub. Log to stdout so dev can see what would have
@@ -102,6 +112,7 @@ export async function sendMail(message: MailgunMessage): Promise<MailgunResult> 
   }
 }
 
+/** The alert address from BAM_NOTIFY_EMAIL, or "" when unset (sendMail then logs instead of sending). */
 export function getBamNotifyEmail(): string {
   return getConfig().bamNotifyEmail;
 }

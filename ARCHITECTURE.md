@@ -170,7 +170,7 @@ To re-theme the canonical site, change the `data-design` attribute on `<body>` i
 | `MAILGUN_DOMAIN` | No | `mg.witus.online` | Ecosystem canonical |
 | `MAILGUN_REGION` | No | `us` | Or `eu` |
 | `EMAIL_FROM` | No | `RideWitUS <noreply@${MAILGUN_DOMAIN}>` | From: header on outgoing mail |
-| `BAM_NOTIFY_EMAIL` | No | `bam@awews.com` | Where form-submission alerts land |
+| `BAM_NOTIFY_EMAIL` | No | unset (no alert mail is sent) | Where form-submission alerts land; a role mailbox, never a personal one |
 | `INBOX_INGEST_URL` | Production | — | WitUS Inbox HMAC ingest endpoint |
 | `INBOX_INGEST_SECRET` | Production | — | HMAC-SHA256 signing key for Inbox |
 | `INBOX_SOURCE_SLUG` | Production | — | This app's source identity. Must match the slug in the Inbox's `INGEST_SOURCES` exactly (unknown slug ⇒ 401) |

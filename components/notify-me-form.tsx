@@ -97,7 +97,7 @@ export function NotifyMeForm() {
         }),
       });
       if (!res.ok) {
-        setStatus({ kind: "err", message: `Form failed (${res.status}). Try again or email bam@awews.com.` });
+        setStatus({ kind: "err", message: `Form failed (${res.status}). Try again, or use the contact link in the footer.` });
         return;
       }
       const summary = allEpisodes

@@ -113,9 +113,11 @@ export function SiteFooter({ theme = defaultTheme, basePath = "" }: SiteFooterPr
               <li>
                 <a href="https://witus.online/privacy" target="_blank" rel="noopener noreferrer" className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>Privacy</a>
               </li>
-              <li>
+              {CONTACT_EMAIL ? (
+                <li>
                 <a href={`mailto:${CONTACT_EMAIL}`} className={cn("inline-flex items-center min-h-[28px] transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 rounded", theme.link, theme.linkFocus)}>Contact</a>
               </li>
+              ) : null}
             </ul>
           </div>
         </div>

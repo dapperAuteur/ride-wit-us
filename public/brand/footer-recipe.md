@@ -149,7 +149,7 @@ export function SiteFooter() {
                 <a href="https://witus.online/privacy" target="_blank" rel="noopener noreferrer" className={linkClasses}>Privacy</a>
               </li>
               <li>
-                <a href="mailto:bam@awews.com" className={linkClasses}>Contact</a>
+                {CONTACT_EMAIL ? <a href={`mailto:${CONTACT_EMAIL}`} className={linkClasses}>Contact</a> : null}
               </li>
             </ul>
           </div>

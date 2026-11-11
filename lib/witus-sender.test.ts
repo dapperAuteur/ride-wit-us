@@ -197,7 +197,7 @@ describe("Outbox drafts match the Outbox's /api/ingest schema", () => {
       expect(s.as_draft).toBe(true);
       expect(s.scheduled_at).toBe("2026-10-12T12:00:00.000Z");
       expect(s.media_urls).toEqual([]);
-      expect(s.links).toEqual(["https://ridewitus.witus.online/episodes/brakes"]);
+      expect(s.links).toEqual(["https://ride.witus.online/episodes/brakes"]);
     }
     const twitter = built.submissions.find((s) => s.platform === "twitter")!;
     expect(twitter.caption.length).toBeLessThanOrEqual(280);
@@ -219,7 +219,7 @@ describe("Outbox drafts match the Outbox's /api/ingest schema", () => {
         ref: "spring-ride-2027",
         title: "Spring community ride",
         summary: "x".repeat(600),
-        url: "https://ridewitus.witus.online/about",
+        url: "https://ride.witus.online/about",
         image_url: "https://cdn.example.com/ride.png",
         platforms: ["bluesky", "facebook"],
       },

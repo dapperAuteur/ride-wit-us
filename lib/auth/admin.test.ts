@@ -24,7 +24,7 @@ describe("failing closed", () => {
     // obvious bug here (an undefined === undefined comparison) would do the opposite.
     delete process.env.ADMIN_EMAIL;
     expect(adminEmail()).toBeNull();
-    expect(isAdminEmail("bam@awews.com")).toBe(false);
+    expect(isAdminEmail("admin@example.com")).toBe(false);
     expect(isAdminEmail(undefined)).toBe(false);
     expect(isAdminEmail(null)).toBe(false);
   });
@@ -33,14 +33,14 @@ describe("failing closed", () => {
     for (const blank of ["", "   "]) {
       process.env.ADMIN_EMAIL = blank;
       expect(adminEmail()).toBeNull();
-      expect(isAdminEmail("bam@awews.com")).toBe(false);
+      expect(isAdminEmail("admin@example.com")).toBe(false);
       // And a session with no email must not match a blank config.
       expect(isAdminEmail("")).toBe(false);
     }
   });
 
   it("refuses a session with no email even when an admin is configured", () => {
-    process.env.ADMIN_EMAIL = "bam@awews.com";
+    process.env.ADMIN_EMAIL = "admin@example.com";
     expect(isAdminEmail(undefined)).toBe(false);
     expect(isAdminEmail(null)).toBe(false);
     expect(isAdminEmail("")).toBe(false);
@@ -50,28 +50,28 @@ describe("failing closed", () => {
 
 describe("matching the configured admin", () => {
   beforeEach(() => {
-    process.env.ADMIN_EMAIL = "bam@awews.com";
+    process.env.ADMIN_EMAIL = "admin@example.com";
   });
 
   it("admits the configured address", () => {
-    expect(isAdminEmail("bam@awews.com")).toBe(true);
+    expect(isAdminEmail("admin@example.com")).toBe(true);
   });
 
   it("is case-insensitive on both sides, and tolerates surrounding whitespace", () => {
-    process.env.ADMIN_EMAIL = "  BAM@AweWS.com  ";
-    expect(isAdminEmail("bam@awews.com")).toBe(true);
-    expect(isAdminEmail("BAM@AWEWS.COM")).toBe(true);
-    expect(isAdminEmail(" bam@awews.com ")).toBe(true);
+    process.env.ADMIN_EMAIL = "  Admin@Example.COM  ";
+    expect(isAdminEmail("admin@example.com")).toBe(true);
+    expect(isAdminEmail("ADMIN@EXAMPLE.COM")).toBe(true);
+    expect(isAdminEmail(" admin@example.com ")).toBe(true);
   });
 
   it("refuses everyone else, including near misses", () => {
     for (const other of [
-      "someone@awews.com",
-      "bam@awews.com.evil.test",
-      "evilbam@awews.com",
-      "bam@awews.co",
-      "bam@notawews.com",
-      "bam+admin@awews.com",
+      "someone-else@example.com",
+      "admin@example.com.evil.test",
+      "editor@example.com",
+      "admin@example.co",
+      "admin@notexample.com",
+      "admin.two@example.com",
     ]) {
       expect(isAdminEmail(other)).toBe(false);
     }
@@ -79,8 +79,8 @@ describe("matching the configured admin", () => {
 
   it("does not treat the address as a pattern", () => {
     // A substring or regex-ish match would admit these; an equality check must not.
-    process.env.ADMIN_EMAIL = "bam@awews.com";
-    expect(isAdminEmail("xbam@awews.comx")).toBe(false);
+    process.env.ADMIN_EMAIL = "admin@example.com";
+    expect(isAdminEmail("admin@example.comx")).toBe(false);
     expect(isAdminEmail(".*")).toBe(false);
   });
 });
